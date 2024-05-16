@@ -13,3 +13,7 @@ brackets = [
     { start = "/*", end = " */", close = true, newline = false, not_in = ["comment", "string"] }
 ]
 collapsed_placeholder = " /* ... */ "
+
+[overrides.string]
+word_characters = ["-"]
+opt_into_language_servers = ["tailwindcss-language-server"]
