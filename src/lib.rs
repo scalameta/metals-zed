@@ -1,4 +1,4 @@
-use zed_extension_api::{self as zed, Result};
+use zed_extension_api::{self as zed, serde_json, settings::LspSettings, Result};
 
 struct ScalaExtension;
 
@@ -9,7 +9,7 @@ impl zed::Extension for ScalaExtension {
 
     fn language_server_command(
         &mut self,
-        _config: zed::LanguageServerConfig,
+        _language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
         let path = worktree
@@ -21,6 +21,21 @@ impl zed::Extension for ScalaExtension {
             args: vec![],
             env: Default::default(),
         })
+    }
+
+    fn language_server_workspace_configuration(
+        &mut self,
+        _language_server_id: &zed::LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> Result<Option<serde_json::Value>> {
+        let settings = LspSettings::for_worktree("metals", worktree)
+            .ok()
+            .and_then(|lsp_settings| lsp_settings.settings.clone())
+            .unwrap_or_default();
+
+        Ok(Some(serde_json::json!({
+            "metals": settings
+        })))
     }
 }
 
