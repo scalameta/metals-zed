@@ -9,4 +9,4 @@ license = "Apache-2.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-zed_extension_api = "0.0.4"
+zed_extension_api = "0.0.6"
