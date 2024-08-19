@@ -19,7 +19,7 @@ impl zed::Extension for ScalaExtension {
         Ok(zed::Command {
             command: path,
             args: vec![],
-            env: Default::default(),
+            env: worktree.shell_env(),
         })
     }
 
