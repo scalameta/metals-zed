@@ -28,3 +28,27 @@ as inlay hints:
   }
 }
 ```
+
+You can also set [Metals initialization options](https://scalameta.org/metals/docs/integrations/new-editor/#initializationoptions) and
+[Metals server properties](https://scalameta.org/metals/docs/integrations/new-editor#metals-server-properties) in your zed settings.json
+in `lsp.metals.binary.arguments` and `lsp.metals.initialization_options`, respectively.
+
+For example, to [enable HTTP server](https://scalameta.org/metals/docs/integrations/new-editor#metals-http-client) (running on http://localhost:5031 by default)
+for executing client commands, which currently are not supported by zed directly, you can use:
+
+``` json
+{
+  "lsp": {
+    "metals": {
+      "binary": {
+        "arguments": [
+          "-Dmetals.http=on"
+        ]
+      },
+      "initialization_options": {
+        "isHttpEnabled": true
+      }
+    }
+  }
+}
+```
