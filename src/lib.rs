@@ -1,4 +1,10 @@
-use zed_extension_api::{self as zed, serde_json, settings::LspSettings, Result};
+use zed_extension_api::{
+    self as zed,
+    lsp::{Completion, CompletionKind, Symbol, SymbolKind},
+    serde_json,
+    settings::LspSettings,
+    CodeLabel, CodeLabelSpan, Result,
+};
 
 struct ScalaExtension;
 
@@ -57,6 +63,61 @@ impl zed::Extension for ScalaExtension {
         Ok(Some(serde_json::json!({
             "metals": settings
         })))
+    }
+
+    fn label_for_completion(
+        &self,
+        _language_server_id: &zed_extension_api::LanguageServerId,
+        completion: Completion,
+    ) -> Option<zed_extension_api::CodeLabel> {
+        let prefix = match completion.kind? {
+            CompletionKind::Method | CompletionKind::Function => "def ",
+            CompletionKind::Constructor
+            | CompletionKind::Class
+            | CompletionKind::Interface
+            | CompletionKind::Module => "class ",
+            CompletionKind::Variable => "var ",
+            CompletionKind::Field
+            | CompletionKind::Constant
+            | CompletionKind::Value
+            | CompletionKind::Property => "val ",
+            CompletionKind::Enum => "enum ",
+            CompletionKind::Keyword => "",
+            _ => return None,
+        };
+        let name = completion.label;
+        let code = format!("{prefix}{name}");
+        let code_len = code.len();
+        Some(CodeLabel {
+            code,
+            spans: vec![CodeLabelSpan::code_range(prefix.len()..code_len)],
+            filter_range: (0..name.len()).into(),
+        })
+    }
+
+    fn label_for_symbol(
+        &self,
+        _language_server_id: &zed_extension_api::LanguageServerId,
+        symbol: Symbol,
+    ) -> Option<CodeLabel> {
+        let prefix = match symbol.kind {
+            SymbolKind::Module
+            | SymbolKind::Class
+            | SymbolKind::Interface
+            | SymbolKind::Constructor => "class ",
+            SymbolKind::Method | SymbolKind::Function => "def ",
+            SymbolKind::Variable => "var ",
+            SymbolKind::Property | SymbolKind::Field | SymbolKind::Constant => "val ",
+            _ => "",
+        };
+        let name = symbol.name;
+        let code = format!("{prefix}{name}");
+        let code_len = code.len();
+        Some(CodeLabel {
+            code,
+            spans: vec![CodeLabelSpan::code_range(prefix.len()..code_len)],
+            filter_range: (0..name.len()).into(),
+        })
     }
 }
 
