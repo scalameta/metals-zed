@@ -3,14 +3,27 @@ grammar = "scala"
 path_suffixes = ["scala", "sbt", "sc"]
 line_comments = ["// "]
 autoclose_before = ";:.,=}])"
+tab_size = 2
 brackets = [
     { start = "{", end = "}", close = true, newline = true },
     { start = "[", end = "]", close = true, newline = true },
     { start = "(", end = ")", close = true, newline = true },
-    { start = "\"", end = "\"", close = true, newline = false, not_in = ["comment", "string"] },
-    { start = "'", end = "'", close = true, newline = false, not_in = ["comment", "string"] },
-    { start = "`", end = "`", close = true, newline = false, not_in = ["comment", "string"] },
-    { start = "/*", end = " */", close = true, newline = false, not_in = ["comment", "string"] }
+    { start = "\"", end = "\"", close = true, newline = false, not_in = [
+        "comment",
+        "string",
+    ] },
+    { start = "'", end = "'", close = true, newline = false, not_in = [
+        "comment",
+        "string",
+    ] },
+    { start = "`", end = "`", close = true, newline = false, not_in = [
+        "comment",
+        "string",
+    ] },
+    { start = "/*", end = " */", close = true, newline = false, not_in = [
+        "comment",
+        "string",
+    ] },
 ]
 collapsed_placeholder = " /* ... */ "
 scope_opt_in_language_servers = ["tailwindcss-language-server"]
