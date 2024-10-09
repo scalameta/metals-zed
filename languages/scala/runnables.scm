@@ -24,3 +24,18 @@
     )
     (#set! tag scala-main)
 )
+
+(
+    (
+        (object_definition
+            name: _
+            body: (template_body
+                (function_definition
+                    name: (identifier) @run
+                ) @_jvm_main_function_end
+            )
+        )
+        (#eq? @run "main")
+    )
+    (#set! tag scala-main)
+)
