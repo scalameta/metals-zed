@@ -76,8 +76,8 @@ impl zed::Extension for ScalaExtension {
             | CompletionKind::Class
             | CompletionKind::Interface
             | CompletionKind::Module => "class ",
+            CompletionKind::Variable => "var ",
             CompletionKind::Field
-            | CompletionKind::Variable
             | CompletionKind::Constant
             | CompletionKind::Value
             | CompletionKind::Property => "val ",
@@ -106,8 +106,8 @@ impl zed::Extension for ScalaExtension {
             | SymbolKind::Interface
             | SymbolKind::Constructor => "class ",
             SymbolKind::Method | SymbolKind::Function => "def ",
-            SymbolKind::Property => todo!(),
-            SymbolKind::Field | SymbolKind::Variable | SymbolKind::Constant => "val ",
+            SymbolKind::Variable => "var ",
+            SymbolKind::Property | SymbolKind::Field | SymbolKind::Constant => "val ",
             _ => "",
         };
         let name = symbol.name;
