@@ -12,3 +12,15 @@
     )
     (#set! tag scala-main)
 )
+
+(
+    (
+        (object_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_app_object_end
+        (#eq? @run "App")
+    )
+    (#set! tag scala-main)
+)
