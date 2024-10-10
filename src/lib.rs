@@ -20,7 +20,7 @@ impl zed::Extension for ScalaExtension {
     ) -> Result<zed::Command> {
         let path = worktree
             .which("metals")
-            .ok_or_else(|| "Metals must be installed via coursier. Please install coursier (https://get-coursier.io/), and then run `cs install metals`.".to_string())?;
+            .ok_or_else(|| "Metals must be installed manually. Recommended way is to install coursier (https://get-coursier.io/), and then run `cs install metals`.".to_string())?;
 
         let arguments = LspSettings::for_worktree("metals", worktree)
             .map(|lsp_settings| {
