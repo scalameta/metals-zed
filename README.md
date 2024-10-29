@@ -52,3 +52,81 @@ for executing client commands, which currently are not supported by zed directly
   }
 }
 ```
+
+## Running ScalaTest tests
+The extension supports detecting tests by checking if the test class inherits one of the following ScalaTest traits:
+- AnyWordSpec / WordSpec
+- AnyFunSpec / FunSpec
+- AnyFunSuite / FunSuite
+- AnyFlatSpec / FlatSpec
+- AnyFeatureSpec / FeatureSpec
+- AnyPropSpec / PropSpec
+- AnyFreeSpec / FreeSpec
+
+In order to get the run icon in the gutter, you need to provide zed with a task that run the test class.
+
+The task must have the tag `scala-test` in order to be detected by the editor.
+
+Following is an example task that you can add to your editor, to know more about tasks refer to [Zed Documentation](https://zed.dev/docs/tasks).
+```json
+[
+  {
+    "label": "run tests with bloop",
+    "name": "run-bloop-test",
+    "command": "./run-bloop-tests.sh ${ZED_WORKTREE_ROOT} ${ZED_SYMBOL}",
+    "working_directory": "${workspace_root}",
+    "environment": {
+      "PATH": "${env.PATH}"
+    },
+    "keystroke": "ctrl-shift-r",
+    "tags": ["scala-test"]
+  }
+]
+```
+
+The corresponding **minimal** `run-bloop-test.sh` which must be placed in your project root.
+If you want to place it anywhere else you'll have to adjust the task accordingly.
+```bash
+#!/bin/bash
+
+project_name=$(basename $1) # Extract the project name from the $ZED_WORKTREE_ROOT
+filename=$2
+
+bloop test $project_name -o "*$filename*"
+```
+
+## Running a main class
+In order to get the run icon in the gutter, you need to provide zed with a task that run the main class.
+
+The task must have the tag `scala-main` in order to be detected by the editor.
+
+Following is an example task that you can add to your editor, to know more about tasks refer to [Zed Documentation](https://zed.dev/docs/tasks).
+```json
+[
+  {
+    "label": "run main with bloop",
+    "name": "run-main",
+    "command": "./run-bloop-main.sh ${ZED_WORKTREE_ROOT} ${ZED_FILE} ${ZED_SYMBOL}",
+    "working_directory": "${workspace_root}",
+    "environment": {
+      "PATH": "${env.PATH}"
+    },
+    "tags": ["scala-main"]
+  }
+]
+```
+
+The corresponding **minimal** `run-bloop-main.sh` which must be placed in your project root.
+If you want to place it anywhere else you'll have to adjust the task accordingly.
+
+```json
+#!/bin/bash
+
+project_name=$(basename $1) # Extract the project name from the $ZED_WORKTREE_ROOT
+filepath=$2
+mainname=$3
+
+package_name=$(cat $filepath | grep -E '^package ' | sed 's/package //') # Extract the package name from the main file
+
+bloop run $project_name -m "$package_name.$mainname"
+```
