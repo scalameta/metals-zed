@@ -39,3 +39,15 @@
     )
     (#set! tag scala-main)
 )
+
+(
+    (
+        (class_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^(AnyWordSpec|WordSpec|AnyFunSpec|FunSpec|AnyFunSuite|FunSuite|AnyFlatSpec|FlatSpec|FeatureSpec|AnyFeatureSpec|AnyPropSpec|PropSpec|AnyFreeSpec|FreeSpec)$")
+    )
+    (#set! tag scala-test)
+)
