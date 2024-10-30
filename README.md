@@ -132,7 +132,7 @@ bloop run $project_name -m "$package_name.$mainname"
 ```
 
 ## Releasing the extension
-To release the extension, you need to bump the version in `Cargo.toml` and `extension.toml` in the root of the repository and create a tag for the version (example bump: e8b826cb3fc0f5f054aa0012e17824f8904a73f5).
+To release the extension, you need to bump the version in `Cargo.toml` and `extension.toml` in the root of the repository and create a tag for the version (example bump: [e8b826cb3fc0f5f054aa0012e17824f8904a73f5](https://github.com/scalameta/metals-zed/commit/e8b826cb3fc0f5f054aa0012e17824f8904a73f5).
 
 After that, you need to open up a PR on [zed-industries/extensions](https://github.com/zed-industries/extensions) (example: [zed-industries/extensions#29](https://github.com/zed-industries/extensions/pull/1609/files), the PR must :
 - Update the submodule on extensions/scala to the appropriate commit
