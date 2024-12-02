@@ -85,7 +85,7 @@ impl zed::Extension for ScalaExtension {
             CompletionKind::Keyword => "",
             _ => return None,
         };
-        let name = completion.label;
+        let name = completion.label.replace("  ", " ").replace("\n", "");
         let code = format!("{prefix}{name}");
         let code_len = code.len();
         Some(CodeLabel {
