@@ -17,3 +17,7 @@ Cargo.lock
 
 # Ignore build-generated grammars folder
 grammars
+
+# Direnv files
+.direnv/
+.envrc
