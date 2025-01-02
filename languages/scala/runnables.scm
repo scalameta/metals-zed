@@ -25,6 +25,32 @@
     (#set! tag scala-main)
 )
 
+;Common Runnables for Cats Effect
+(
+    (
+        (object_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_app_object_end
+        (#match? @run "^IOApp?\.Simple")
+    )
+    (#set! tag scala-main)
+)
+
+;Common Runnables for ZIO
+(
+    (
+        (object_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_app_object_end
+        (#match? @run "^ZIOApp?(Default)")
+    )
+    (#set! tag scala-main)
+)
+
 (
     (
         (object_definition
