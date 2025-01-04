@@ -53,8 +53,10 @@ for executing client commands, which currently are not supported by zed directly
 }
 ```
 
-## Running ScalaTest tests
-The extension supports detecting tests by checking if the test class inherits one of the following ScalaTest traits:
+## Running Tests
+The extension supports detecting tests by checking if the test class inherits from specific traits
+
+For ScalaTest:
 - AnyWordSpec / WordSpec
 - AnyFunSpec / FunSpec
 - AnyFunSuite / FunSuite
@@ -62,6 +64,30 @@ The extension supports detecting tests by checking if the test class inherits on
 - AnyFeatureSpec / FeatureSpec
 - AnyPropSpec / PropSpec
 - AnyFreeSpec / FreeSpec
+
+For Specs2:
+- Specification
+
+For Munit:
+- FunSuite
+
+For Munit Extensions:
+- ScalaCheckSuite
+- CatsEffectSuite
+- ZSuite
+- Http4sSuite
+- SnapshotSuite
+- RequestResponsePactForger
+- HedgehogSuite
+- TapirGoldenOpenAPISuite
+- TapirGoldenOpenAPIValidatorSuite
+
+For Weaver Test:
+- SimpleIOSuite / IOSuite
+
+For ZIO Test:
+- ZIOSpecDefault
+
 
 In order to get the run icon in the gutter, you need to provide zed with a task that run the test class.
 
