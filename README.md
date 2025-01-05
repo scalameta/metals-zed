@@ -82,12 +82,16 @@ For Munit Extensions:
 - TapirGoldenOpenAPISuite
 - TapirGoldenOpenAPIValidatorSuite
 
+For Hedgehog:
+- Properties
+
 For Weaver Test:
 - SimpleIOSuite / IOSuite
 
 For ZIO Test:
 - ZIOSpecDefault
 
+If your favorite test framework is not included, or more traits are have been added, please update the `runnables.scm` file found in the `languages/scala` directory
 
 In order to get the run icon in the gutter, you need to provide zed with a task that run the test class.
 

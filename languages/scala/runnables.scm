@@ -66,7 +66,7 @@
     (#set! tag scala-main)
 )
 
-; ScalaTest Common Runnables
+; ScalaTest Common Runnables - https://www.scalatest.org/
 (
     (
         (class_definition
@@ -127,6 +127,19 @@
             )
         ) @_scala_test_class_end
         (#match? @run "^((test\\.)?ZIOSpecDefault)$")
+    )
+    (#set! tag scala-test)
+)
+
+; Hedgehog - https://hedgehogqa.github.io/scala-hedgehog/
+(
+    (
+        (class_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^Properties$")
     )
     (#set! tag scala-test)
 )
