@@ -66,6 +66,7 @@
     (#set! tag scala-main)
 )
 
+; ScalaTest Common Runnables - https://www.scalatest.org/
 (
     (
         (class_definition
@@ -74,6 +75,71 @@
             )
         ) @_scala_test_class_end
         (#match? @run "^(AnyWordSpec|WordSpec|AnyFunSpec|FunSpec|AnyFunSuite|FunSuite|AnyFlatSpec|FlatSpec|FeatureSpec|AnyFeatureSpec|AnyPropSpec|PropSpec|AnyFreeSpec|FreeSpec)$")
+    )
+    (#set! tag scala-test)
+)
+
+; Munit Common Runnables - outside of FunSuite all other keywords were derived from links found in https://scalameta.org/munit/docs/integrations/external-integrations.html
+(
+    (
+        (class_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^(munit\\.)?(FunSuite|ScalaCheckSuite|CatsEffectSuite|Http4sSuite|((snapshot\\.)?SnapshotSuite)|ZSuite|RequestResponsePactForger|HedgehogSuite|TapirGoldenOpenAPISuite|TapirGoldenOpenAPIValidatorSuite)$")
+    )
+    (#set! tag scala-test)
+)
+
+; Specs2 Common Runnables - https://etorreborre.github.io/specs2/guide/SPECS2-5.5.8/org.specs2.guide.UserGuide.html
+(
+    (
+        (class_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^((specs2\\.)?(mutable\\.)?)?(Specification)")
+    )
+    (#set! tag scala-test)
+)
+
+; Weaver Test - https://disneystreaming.github.io/weaver-test/
+(
+    (
+        (class_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^((Simple)?IOSuite)$")
+    )
+    (#set! tag scala-test)
+)
+
+; ZIO Test - https://zio.dev/reference/test/
+(
+    (
+        (class_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^((test\\.)?ZIOSpecDefault)$")
+    )
+    (#set! tag scala-test)
+)
+
+; Hedgehog - https://hedgehogqa.github.io/scala-hedgehog/
+(
+    (
+        (class_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^Properties$")
     )
     (#set! tag scala-test)
 )
