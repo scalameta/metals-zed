@@ -53,6 +53,48 @@ for executing client commands, which currently are not supported by zed directly
 }
 ```
 
+## Inlay hints
+
+To turn on inlay hints you can use the configuration below:
+```json
+{
+  "inlay_hints": {
+    "enabled": true,
+    "show_type_hints": true,
+    "show_parameter_hints": true,
+    "show_other_hints": true,
+    "show_background": false,
+    "edit_debounce_ms": 700,
+    "scroll_debounce_ms": 50
+  },
+  "lsp": {
+    "metals": {
+      "settings": {
+        "inlayHints": {
+          "inferredTypes": {
+            "enable": true
+          },
+          "implicitArguments": {
+            "enable": true
+          },          
+          "implicitConversions": {
+            "enable": true
+          },          
+          "typeParameters": {
+            "enable": true
+          },          
+          "hintsInPatternMatch": {
+            "enable": true
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Both sections need to be set, since Zed doesn't turn on inlay hints by default and Metals also needs to know which hints users wants to see.
+
 ## Running Tests
 The extension supports detecting tests by checking if the test class inherits from specific traits
 
