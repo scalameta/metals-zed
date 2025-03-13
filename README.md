@@ -156,8 +156,8 @@ Following is an example task that you can add to your editor, to know more about
 ]
 ```
 
-The corresponding **minimal** `run-bloop-test.sh` which must be placed in your project root.
-If you want to place it anywhere else you'll have to adjust the task accordingly.
+The corresponding **minimal** `run-bloop-tests.sh` which must be placed in your project root.
+If you want to place it anywhere else you'll have to adjust the task accordingly. The script must be executable `chmod +x ./run-bloop-tests.sh`.
 ```bash
 #!/bin/bash
 
