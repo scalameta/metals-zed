@@ -100,7 +100,7 @@
                 type: (type_identifier) @run
             )
         ) @_scala_test_class_end
-        (#match? @run "^((specs2\\.)?(mutable\\.)?)?(Specification|SpecLike)")
+        (#match? @run "^((specs2\\.)?(mutable\\.)?)?(Specification|SpecificationLike|Spec|SpecLike)")
     )
     (#set! tag scala-test)
 )

@@ -108,7 +108,8 @@ For ScalaTest:
 - AnyFreeSpec / FreeSpec
 
 For Specs2:
-- Specification
+- Specification / SpecificationLike
+- Spec / SpecLike
 
 For Munit:
 - FunSuite
