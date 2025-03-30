@@ -1,0 +1,58 @@
+name: Check Release Version
+
+on:
+  push:
+    tags: [v*]
+
+jobs:
+  check-version-match:
+    name: Check Version Match
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract tag version
+        id: extract_tag
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          echo "TAG_VERSION=${TAG_VERSION#v}" >> $GITHUB_ENV
+          echo "Extracted tag version: ${TAG_VERSION#v}"
+
+      - name: Read version from extension.toml
+        id: read_file_version
+        run: |
+          if [ ! -f extension.toml ]; then
+            echo "Error: extension.toml not found in the root directory."
+            exit 1
+          fi
+
+          # Extract the version value
+          FILE_VERSION_LINE=$(grep '^version *=' extension.toml)
+
+          if [ -z "$FILE_VERSION_LINE" ]; then
+             echo "Error: Could not find a line starting with 'version =' in extension.toml"
+             exit 1
+          fi
+
+          # Extract the part inside the quotes
+          FILE_VERSION=$(echo "$FILE_VERSION_LINE" | sed -E 's/version *= *"([^"]+)"/\1/')
+
+          if [ -z "$FILE_VERSION" ]; then
+             echo "Error: Could not extract version value from line: $FILE_VERSION_LINE"
+             exit 1
+          fi
+
+          echo "FILE_VERSION=${FILE_VERSION}" >> $GITHUB_ENV
+          echo "Read file version: ${FILE_VERSION}"
+
+      - name: Compare versions
+        run: |
+          echo "Comparing Tag Version (${{ env.TAG_VERSION }}) with File Version (${{ env.FILE_VERSION }})"
+          if [ "${{ env.TAG_VERSION }}" != "${{ env.FILE_VERSION }}" ]; then
+            echo "Error: Tag version (${{ env.TAG_VERSION }}) does not match the version in extension.toml (${{ env.FILE_VERSION }})!"
+            exit 1 # Fail the workflow
+          else
+            echo "Success: Tag version matches the version in extension.toml."
+          fi
