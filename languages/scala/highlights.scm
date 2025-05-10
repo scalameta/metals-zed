@@ -1,10 +1,16 @@
 ; CREDITS @stumash (stuart.mashaal@gmail.com)
 
+(field_expression field: (identifier) @property)
+(field_expression value: (identifier) @type
+ (#match? @type "^[A-Z]"))
+
+(type_identifier) @type
+
 (class_definition
   name: (identifier) @type)
 
 (enum_definition
-  name: (identifier) @enum)
+  name: (identifier) @type)
 
 (object_definition
   name: (identifier) @type)
@@ -21,9 +27,9 @@
 ;; variables
 
 (class_parameter
-  name: (identifier) @property)
+  name: (identifier) @parameter)
 
-(self_type (identifier) @property)
+(self_type (identifier) @parameter)
 
 (interpolation (identifier) @none)
 (interpolation (block) @none)
@@ -32,8 +38,6 @@
 
 (type_definition
   name: (type_identifier) @type.definition)
-
-(type_identifier) @type
 
 ;; val/var definitions/declarations
 
@@ -49,24 +53,15 @@
 (var_declaration
   name: (identifier) @variable)
 
-; method definition
-
-(function_declaration
-      name: (identifier) @function.method)
-
-(function_definition
-      name: (identifier) @function.method)
-
 ; imports/exports
-((import_declaration
-  path: (identifier) @type) (#match? @type "^[A-Z]"))
 
 (import_declaration
   path: (identifier) @namespace)
-
-((stable_identifier (identifier) @type) (#match? @type "^[A-Z]"))
-
 ((stable_identifier (identifier) @namespace))
+
+((import_declaration
+  path: (identifier) @type) (#match? @type "^[A-Z]"))
+((stable_identifier (identifier) @type) (#match? @type "^[A-Z]"))
 
 (export_declaration
   path: (identifier) @namespace)
@@ -81,24 +76,24 @@
 ; method invocation
 
 (call_expression
-  function: (identifier) @function)
+  function: (identifier) @function.call)
 
 (call_expression
-  function: (operator_identifier) @function)
+  function: (operator_identifier) @function.call)
 
 (call_expression
   function: (field_expression
-    field: (identifier) @function.method))
+    field: (identifier) @method.call))
 
 ((call_expression
    function: (identifier) @constructor)
  (#match? @constructor "^[A-Z]"))
 
 (generic_function
-  function: (identifier) @function)
+  function: (identifier) @function.call)
 
 (interpolated_string_expression
-  interpolator: (identifier) @function)
+  interpolator: (identifier) @function.call)
 
 ; function definitions
 
@@ -111,11 +106,15 @@
 (binding
   name: (identifier) @parameter)
 
-; expressions
+; method definition
 
-(field_expression field: (identifier) @property)
-(field_expression value: (identifier) @type
- (#match? @type "^[A-Z]"))
+(function_declaration
+      name: (identifier) @method)
+
+(function_definition
+      name: (identifier) @method)
+
+; expressions
 
 (infix_expression operator: (identifier) @operator)
 (infix_expression operator: (operator_identifier) @operator)
@@ -126,10 +125,9 @@
 
 (boolean_literal) @boolean
 (integer_literal) @number
-(floating_point_literal) @number
+(floating_point_literal) @float
 
 [
-  (symbol_literal)
   (string)
   (character_literal)
   (interpolated_string_expression)
@@ -178,9 +176,9 @@
   "protected"
 ] @type.qualifier
 
-(inline_modifier) @label
+(inline_modifier) @storageclass
 
-(null_literal) @constant
+(null_literal) @constant.builtin
 
 (wildcard) @parameter
 
@@ -188,14 +186,14 @@
 
 ;; special keywords
 
-"new" @operator
+"new" @keyword.operator
 
 [
   "else"
   "if"
   "match"
   "then"
-] @keyword
+] @conditional
 
 [
  "("
@@ -216,9 +214,9 @@
   "for"
   "while"
   "yield"
-] @keyword
+] @repeat
 
-"def" @keyword
+"def" @keyword.function
 
 [
  "=>"
@@ -226,38 +224,35 @@
  "@"
 ] @operator
 
-["import" "export"] @keyword ; @include
+["import" "export"] @include
 
 [
   "try"
   "catch"
   "throw"
-] @keyword
+] @exception
 
-"return" @keyword
+"return" @keyword.return
 
-[
-  (comment)
-  (block_comment)
-  "_end_ident"
-] @comment
+(comment) @spell @comment
+(block_comment) @spell @comment
 
 ;; `case` is a conditional keyword in case_block
 
 (case_block
-  (case_clause ("case") @keyword))
+  (case_clause ("case") @conditional))
 (indented_cases
-  (case_clause ("case") @keyword))
+  (case_clause ("case") @conditional))
 
 (operator_identifier) @operator
 
 ((identifier) @type (#match? @type "^[A-Z]"))
-((identifier) @variable.special
- (#match? @variable.special "^this$"))
+((identifier) @variable.builtin
+ (#match? @variable.builtin "^this$"))
 
 (
-  (identifier) @function
-  (#match? @function "^super$")
+  (identifier) @function.builtin
+  (#match? @function.builtin "^super$")
 )
 
 ;; Scala CLI using directives
