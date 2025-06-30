@@ -1,0 +1,87 @@
+{
+  "type": "object",
+  "title": "Metals DAP Configuration",
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "Display name for this configuration."
+    },
+    "adapter": {
+      "type": "string",
+      "description": "Adapter type, should be 'metals-dap'.",
+      "const": "metals-dap"
+    },
+    "request": {
+      "type": "string",
+      "description": "The request type of this launch configuration. Valid values are 'launch' and 'attach'.",
+      "enum": ["launch", "attach"]
+    },
+    "program": {
+      "type": "string",
+      "description": "Path to the program to debug. Can be used as mainClass if mainClass is not specified."
+    },
+    "mainClass": {
+      "type": "string",
+      "description": "The fully qualified name of the main class to run."
+    },
+    "testClass": {
+      "type": "string",
+      "description": "The fully qualified name of the test class to run."
+    },
+    "args": {
+      "type": "array",
+      "description": "Command line arguments passed to the program.",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "cwd": {
+      "type": "string",
+      "description": "Current working directory of the program."
+    },
+    "jvmOptions": {
+      "type": ["array", "string"],
+      "description": "JVM options. Can be an array of strings or a single space-separated string.",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "buildTarget": {
+      "type": "string",
+      "description": "The build target name (e.g., sbt project name)."
+    },
+    "processId": {
+      "type": ["integer", "string"],
+      "description": "Process ID to attach to. If specified, 'request' should be 'attach'."
+    },
+    "env": {
+        "type": "object",
+        "description": "Environment variables to pass to the program.",
+        "additionalProperties": {
+            "type": "string"
+        }
+    },
+    "build": {
+        "type": ["string", "object"],
+        "description": "Optional task to run before debugging. Can be a task label or a task definition."
+    }
+  },
+  "required": [
+    "label",
+    "adapter",
+    "request"
+  ],
+  "oneOf": [
+    { "required": ["mainClass"] },
+    { "required": ["testClass"] },
+    { "required": ["program"] }
+  ],
+  "if": {
+    "properties": { "request": { "const": "attach" } }
+  },
+  "then": {
+    "required": ["processId"]
+  }
+}
