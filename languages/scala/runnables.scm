@@ -121,7 +121,7 @@
 ; ZIO Test - https://zio.dev/reference/test/
 (
     (
-        (class_definition
+        (object_definition
             extend: (extends_clause
                 type: (type_identifier) @run
             )
