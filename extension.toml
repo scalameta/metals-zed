@@ -1,7 +1,7 @@
 id = "scala"
 name = "Scala"
 description = "Scala support."
-version = "0.1.3"
+version = "0.1.4"
 schema_version = 1
 authors = [
     "Igal Tabachnik <hmemcpy@gmail.com>",
