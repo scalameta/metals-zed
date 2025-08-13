@@ -118,6 +118,18 @@
     (#set! tag scala-test)
 )
 
+(
+    (
+        (object_definition
+            extend: (extends_clause
+                type: (type_identifier) @run
+            )
+        ) @_scala_test_class_end
+        (#match? @run "^(FunSuite|FunSuiteIO)$")
+    )
+    (#set! tag scala-test)
+)
+
 ; ZIO Test - https://zio.dev/reference/test/
 (
     (
