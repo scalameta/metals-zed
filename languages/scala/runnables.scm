@@ -87,7 +87,7 @@
                 type: (type_identifier) @run
             )
         ) @_scala_test_class_end
-        (#match? @run "^(munit\\.)?(FunSuite|ScalaCheckSuite|CatsEffectSuite|Http4sSuite|((snapshot\\.)?SnapshotSuite)|ZSuite|RequestResponsePactForger|HedgehogSuite|TapirGoldenOpenAPISuite|TapirGoldenOpenAPIValidatorSuite)$")
+        (#match? @run "^(munit\.)?(FunSuite|ScalaCheckSuite|CatsEffectSuite|Http4sSuite|((snapshot\.)?SnapshotSuite)|ZSuite|RequestResponsePactForger|HedgehogSuite|TapirGoldenOpenAPISuite|TapirGoldenOpenAPIValidatorSuite)$")
     )
     (#set! tag scala-test)
 )
@@ -100,7 +100,7 @@
                 type: (type_identifier) @run
             )
         ) @_scala_test_class_end
-        (#match? @run "^((specs2\\.)?(mutable\\.)?)?(Specification|SpecificationLike|Spec|SpecLike)")
+        (#match? @run "^((specs2\.)?(mutable\.)?)?(Specification|SpecificationLike|Spec|SpecLike)")
     )
     (#set! tag scala-test)
 )
@@ -138,7 +138,7 @@
                 type: (type_identifier) @run
             )
         ) @_scala_test_class_end
-        (#match? @run "^((test\\.)?ZIOSpecDefault)$")
+        (#match? @run "^((test\.)?ZIOSpecDefault)$")
     )
     (#set! tag scala-test)
 )
