@@ -83,7 +83,7 @@
 
 (call_expression
   function: (field_expression
-    field: (identifier) @method.call))
+    field: (identifier) @function.call))
 
 ((call_expression
    function: (identifier) @constructor)
@@ -109,10 +109,10 @@
 ; method definition
 
 (function_declaration
-      name: (identifier) @method)
+      name: (identifier) @function)
 
 (function_definition
-      name: (identifier) @method)
+      name: (identifier) @function)
 
 ; expressions
 
@@ -125,7 +125,7 @@
 
 (boolean_literal) @boolean
 (integer_literal) @number
-(floating_point_literal) @float
+(floating_point_literal) @number
 
 [
   (string)
@@ -165,6 +165,10 @@
   "implicit"
   "extension"
   "with"
+  "else"
+  "if"
+  "match"
+  "then"
 ] @keyword
 
 [
@@ -187,13 +191,6 @@
 ;; special keywords
 
 "new" @keyword.operator
-
-[
-  "else"
-  "if"
-  "match"
-  "then"
-] @conditional
 
 [
  "("
