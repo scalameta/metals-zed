@@ -169,6 +169,13 @@
   "if"
   "match"
   "then"
+  "do"
+  "for"
+  "while"
+  "yield"
+  "try"
+  "catch"
+  "throw"
 ] @keyword
 
 [
@@ -206,13 +213,6 @@
  ","
 ] @punctuation.delimiter
 
-[
-  "do"
-  "for"
-  "while"
-  "yield"
-] @repeat
-
 "def" @keyword.function
 
 [
@@ -223,12 +223,6 @@
 
 ["import" "export"] @include
 
-[
-  "try"
-  "catch"
-  "throw"
-] @exception
-
 "return" @keyword.return
 
 (comment) @spell @comment
@@ -237,9 +231,9 @@
 ;; `case` is a conditional keyword in case_block
 
 (case_block
-  (case_clause ("case") @conditional))
+  (case_clause ("case") @keyword))
 (indented_cases
-  (case_clause ("case") @conditional))
+  (case_clause ("case") @keyword))
 
 (operator_identifier) @operator
 
