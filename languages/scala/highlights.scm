@@ -83,7 +83,7 @@
 
 (call_expression
   function: (field_expression
-    field: (identifier) @method.call))
+    field: (identifier) @function.call))
 
 ((call_expression
    function: (identifier) @constructor)
@@ -109,10 +109,10 @@
 ; method definition
 
 (function_declaration
-      name: (identifier) @method)
+      name: (identifier) @function)
 
 (function_definition
-      name: (identifier) @method)
+      name: (identifier) @function)
 
 ; expressions
 
@@ -125,7 +125,7 @@
 
 (boolean_literal) @boolean
 (integer_literal) @number
-(floating_point_literal) @float
+(floating_point_literal) @number
 
 [
   (string)
@@ -165,6 +165,17 @@
   "implicit"
   "extension"
   "with"
+  "else"
+  "if"
+  "match"
+  "then"
+  "do"
+  "for"
+  "while"
+  "yield"
+  "try"
+  "catch"
+  "throw"
 ] @keyword
 
 [
@@ -189,13 +200,6 @@
 "new" @keyword.operator
 
 [
-  "else"
-  "if"
-  "match"
-  "then"
-] @conditional
-
-[
  "("
  ")"
  "["
@@ -209,13 +213,6 @@
  ","
 ] @punctuation.delimiter
 
-[
-  "do"
-  "for"
-  "while"
-  "yield"
-] @repeat
-
 "def" @keyword.function
 
 [
@@ -226,12 +223,6 @@
 
 ["import" "export"] @include
 
-[
-  "try"
-  "catch"
-  "throw"
-] @exception
-
 "return" @keyword.return
 
 (comment) @spell @comment
@@ -240,9 +231,9 @@
 ;; `case` is a conditional keyword in case_block
 
 (case_block
-  (case_clause ("case") @conditional))
+  (case_clause ("case") @keyword))
 (indented_cases
-  (case_clause ("case") @conditional))
+  (case_clause ("case") @keyword))
 
 (operator_identifier) @operator
 
