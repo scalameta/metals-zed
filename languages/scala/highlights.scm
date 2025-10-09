@@ -1,16 +1,10 @@
 ; CREDITS @stumash (stuart.mashaal@gmail.com)
 
-(field_expression field: (identifier) @property)
-(field_expression value: (identifier) @type
- (#match? @type "^[A-Z]"))
-
-(type_identifier) @type
-
 (class_definition
   name: (identifier) @type)
 
 (enum_definition
-  name: (identifier) @type)
+  name: (identifier) @enum)
 
 (object_definition
   name: (identifier) @type)
@@ -27,9 +21,9 @@
 ;; variables
 
 (class_parameter
-  name: (identifier) @parameter)
+  name: (identifier) @property)
 
-(self_type (identifier) @parameter)
+(self_type (identifier) @property)
 
 (interpolation (identifier) @none)
 (interpolation (block) @none)
@@ -38,6 +32,8 @@
 
 (type_definition
   name: (type_identifier) @type.definition)
+
+(type_identifier) @type
 
 ;; val/var definitions/declarations
 
@@ -53,15 +49,24 @@
 (var_declaration
   name: (identifier) @variable)
 
+; method definition
+
+(function_declaration
+      name: (identifier) @function.method)
+
+(function_definition
+      name: (identifier) @function.method)
+
 ; imports/exports
+((import_declaration
+  path: (identifier) @type) (#match? @type "^[A-Z]"))
 
 (import_declaration
   path: (identifier) @namespace)
-((stable_identifier (identifier) @namespace))
 
-((import_declaration
-  path: (identifier) @type) (#match? @type "^[A-Z]"))
 ((stable_identifier (identifier) @type) (#match? @type "^[A-Z]"))
+
+((stable_identifier (identifier) @namespace))
 
 (export_declaration
   path: (identifier) @namespace)
@@ -76,24 +81,24 @@
 ; method invocation
 
 (call_expression
-  function: (identifier) @function.call)
+  function: (identifier) @function)
 
 (call_expression
-  function: (operator_identifier) @function.call)
+  function: (operator_identifier) @function)
 
 (call_expression
   function: (field_expression
-    field: (identifier) @function.call))
+    field: (identifier) @function.method))
 
 ((call_expression
    function: (identifier) @constructor)
  (#match? @constructor "^[A-Z]"))
 
 (generic_function
-  function: (identifier) @function.call)
+  function: (identifier) @function)
 
 (interpolated_string_expression
-  interpolator: (identifier) @function.call)
+  interpolator: (identifier) @function)
 
 ; function definitions
 
@@ -116,6 +121,10 @@
 
 ; expressions
 
+(field_expression field: (identifier) @property)
+(field_expression value: (identifier) @type
+ (#match? @type "^[A-Z]"))
+
 (infix_expression operator: (identifier) @operator)
 (infix_expression operator: (operator_identifier) @operator)
 (infix_type operator: (operator_identifier) @operator)
@@ -128,6 +137,7 @@
 (floating_point_literal) @number
 
 [
+  (symbol_literal)
   (string)
   (character_literal)
   (interpolated_string_expression)
@@ -187,9 +197,9 @@
   "protected"
 ] @type.qualifier
 
-(inline_modifier) @storageclass
+(inline_modifier) @label
 
-(null_literal) @constant.builtin
+(null_literal) @constant
 
 (wildcard) @parameter
 
@@ -197,7 +207,7 @@
 
 ;; special keywords
 
-"new" @keyword.operator
+"new" @operator
 
 [
  "("
@@ -221,12 +231,15 @@
  "@"
 ] @operator
 
-["import" "export"] @include
+["import" "export"] @keyword ; @include
 
 "return" @keyword.return
 
-(comment) @spell @comment
-(block_comment) @spell @comment
+[
+  (comment)
+  (block_comment)
+  "_end_ident"
+] @comment
 
 ;; `case` is a conditional keyword in case_block
 
@@ -238,12 +251,12 @@
 (operator_identifier) @operator
 
 ((identifier) @type (#match? @type "^[A-Z]"))
-((identifier) @variable.builtin
- (#match? @variable.builtin "^this$"))
+((identifier) @variable.special
+ (#match? @variable.special "^this$"))
 
 (
-  (identifier) @function.builtin
-  (#match? @function.builtin "^super$")
+  (identifier) @function
+  (#match? @function "^super$")
 )
 
 ;; Scala CLI using directives
