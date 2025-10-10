@@ -1,3 +1,7 @@
+(package_clause
+  "package" @context
+  name: (_) @name) @item
+
 (class_definition
     "class" @context
     name: (_) @name) @item
@@ -9,6 +13,10 @@
 (object_definition
     "object" @context
     name: (_) @name) @item
+
+(given_definition
+    "given" @context
+    name: (_)? @name) @item
 
 (trait_definition
     "trait" @context

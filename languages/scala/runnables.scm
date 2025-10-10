@@ -1,11 +1,13 @@
 (
     (
+        (package_clause
+          name: (package_identifier) @scala_package_name)*
         (function_definition
             (annotation
                 name: (type_identifier) @run
             )
-            name: _
-            parameters: _
+            name: (identifier) @scala_main_function_name
+            parameters: _?
             body: _
         ) @_scala_main_function_end
         (#eq? @run "main")
@@ -15,7 +17,10 @@
 
 (
     (
+        (package_clause
+          name: (package_identifier) @scala_package_name)*
         (object_definition
+            name: (identifier) @scala_main_function_name
             extend: (extends_clause
                 type: (type_identifier) @run
             )
@@ -53,8 +58,10 @@
 
 (
     (
+        (package_clause
+          name: (package_identifier) @scala_package_name)*
         (object_definition
-            name: _
+            name: (identifier) @scala_main_function_name
             body: (template_body
                 (function_definition
                     name: (identifier) @run

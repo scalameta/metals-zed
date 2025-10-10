@@ -137,7 +137,6 @@
 (floating_point_literal) @number
 
 [
-  (symbol_literal)
   (string)
   (character_literal)
   (interpolated_string_expression)
