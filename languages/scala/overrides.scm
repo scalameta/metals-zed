@@ -1,5 +1,4 @@
 [
-  (symbol_literal)
   (string)
   (character_literal)
   (interpolated_string_expression)
