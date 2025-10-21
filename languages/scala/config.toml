@@ -1,6 +1,6 @@
 name = "Scala"
 grammar = "scala"
-path_suffixes = ["scala", "sbt", "sc"]
+path_suffixes = ["scala", "sbt", "sc", "mill"]
 line_comments = ["// "]
 autoclose_before = ";:.,=}])"
 tab_size = 2
