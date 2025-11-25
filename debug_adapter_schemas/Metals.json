@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "Launch main or test class",
+      "allOf": [
+        {
+          "properties": {
+            "request": {
+              "type": "string",
+              "enum": [
+                "launch"
+              ],
+              "description": "The request type for the Scala debug adapter, always \"launch\""
+            },
+            "buildTarget": {
+              "type": "string",
+              "description": "Optional name of the build target to debug"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Arguments passed to the class to run"
+            },
+            "jvmOptions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The properties for the JVM (e.g., -Xms<size> -Xmx<size> -D<name>=<value>)"
+            },
+            "env": {
+              "type": "object",
+              "patternProperties": {
+                ".*": {
+                  "type": "string"
+                }
+              },
+              "description": "The extra environment variables for the program"
+            },
+            "envFile": {
+              "type": "string",
+              "description": "Name of a .env file with additional environment variables"
+            }
+          },
+          "required": [
+            "request"
+          ]
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "default": "$ZED_FILE",
+                  "description": "Path to the file to be debugged used by Metals discovery"
+                },
+                "runType": {
+                  "type": "string",
+                  "enum": [
+                    "run",
+                    "runOrTestFile",
+                    "testFile",
+                    "testTarget"
+                  ],
+                  "default": "runOrTestFile",
+                  "description": "The run type for Metals discovery"
+                }
+              },
+              "required": [
+                "path"
+              ]
+            },
+            {
+              "properties": {
+                "mainClass": {
+                  "type": "string",
+                  "description": "The fully qualified name of the main class to run."
+                }
+              },
+              "required": [
+                "mainClass"
+              ]
+            },
+            {
+              "properties": {
+                "testClass": {
+                  "type": "string",
+                  "description": "The fully qualified name of the test class to run."
+                }
+              },
+              "required": [
+                "testClass"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Attach to a running process",
+      "properties": {
+        "request": {
+          "type": "string",
+          "enum": [
+            "attach"
+          ],
+          "description": "The request type for the Scala debug adapter, always \"attach\"."
+        },
+        "buildTarget": {
+          "type": "string",
+          "description": "Name of the build target to debug"
+        },
+        "hostName": {
+          "type": "string",
+          "default": "localhost",
+          "description": "THe Host name or IP address of the debuggee JVM"
+        },
+        "port": {
+          "type": "integer",
+          "default": "5005",
+          "description": "Port to attach to"
+        }
+      },
+      "required": [
+        "request",
+        "hostName",
+        "port"
+      ]
+    }
+  ]
+}

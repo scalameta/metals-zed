@@ -1,7 +1,7 @@
 id = "scala"
 name = "Scala"
 description = "Scala support."
-version = "0.1.6"
+version = "0.2.0"
 schema_version = 1
 authors = [
     "Igal Tabachnik <hmemcpy@gmail.com>",
@@ -17,3 +17,5 @@ language = "Scala"
 [grammars.scala]
 repository = "https://github.com/tree-sitter/tree-sitter-scala"
 commit = "97aead18d97708190a51d4f551ea9b05b60641c9"
+
+[debug_adapters.Metals]

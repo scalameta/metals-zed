@@ -1,25 +1,42 @@
+use std::{env, str::FromStr};
+
 use zed_extension_api::{
-    self as zed,
+    self as zed, CodeLabel, CodeLabelSpan, DebugAdapterBinary, DebugTaskDefinition, Extension,
+    Result, StartDebuggingRequestArguments, StartDebuggingRequestArgumentsRequest, Worktree,
     lsp::{Completion, CompletionKind, Symbol, SymbolKind},
-    serde_json,
+    serde_json::{self, Value},
     settings::LspSettings,
-    CodeLabel, CodeLabelSpan, Result,
 };
 
-struct ScalaExtension;
+use crate::dap::Debugger;
 
-impl zed::Extension for ScalaExtension {
+mod dap;
+
+const LSP_DAP_NAME: &str = "Metals";
+// Proxy is required to send request to LSP and to be able to start the DAP server
+// Zed doesn't support sesnding requests to LSP from extensions
+const PROXY_CODE: &str = include_str!("proxy.mjs");
+const USE_PROXY: bool = true;
+
+struct ScalaExtension {
+    dap: Debugger, // DAP specific methods
+}
+
+impl Extension for ScalaExtension {
     fn new() -> Self {
-        Self
+        Self {
+            dap: Debugger::new(),
+        }
     }
 
+    // This method is called by Zed to start LSP
     fn language_server_command(
         &mut self,
         _language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
-        let path = worktree
-            .which("metals")
+        let metals_path = worktree
+            .which(LSP_DAP_NAME)
             .ok_or_else(|| "Metals must be installed manually. Recommended way is to install coursier (https://get-coursier.io/), and then run `cs install metals`.".to_string())?;
 
         let arguments = LspSettings::for_worktree("metals", worktree)
@@ -32,11 +49,39 @@ impl zed::Extension for ScalaExtension {
             })
             .unwrap_or_default();
 
-        Ok(zed::Command {
-            command: path,
-            args: arguments,
-            env: worktree.shell_env(),
-        })
+        if USE_PROXY {
+            // Get extension directory to store the proxy port number in dedicated file there
+            let extension_dir = env::current_dir()
+                .map_err(|err| format!("Could not get current dir: {err}"))
+                .and_then(|p| {
+                    p.to_str()
+                        .map(|s| s.to_string())
+                        .ok_or("Could not convert path to string".to_string())
+                })?;
+
+            // Provide arguments to Node to start the proxy and Metals through it
+            let mut args = vec![
+                "--input-type=module".to_string(),
+                "-e".to_string(),
+                PROXY_CODE.to_string(),
+                extension_dir,
+                metals_path,
+            ];
+            // Add arguments for Metals to pass them through
+            args.extend(arguments.to_owned());
+
+            Ok(zed::Command {
+                command: zed::node_binary_path()?, // Node is used to start the proxy
+                args,
+                env: worktree.shell_env(),
+            })
+        } else {
+            Ok(zed::Command {
+                command: metals_path,
+                args: arguments,
+                env: worktree.shell_env(),
+            })
+        }
     }
 
     fn language_server_initialization_options(
@@ -118,6 +163,72 @@ impl zed::Extension for ScalaExtension {
             spans: vec![CodeLabelSpan::code_range(prefix.len()..code_len)],
             filter_range: (0..name.len()).into(),
         })
+    }
+
+    // This method is called by Zed to start debugger
+    // In case of Metals, this requires sending "debug-adapter-start" request to LSP
+    // See: https://www.chris-kipp.io/blog/the-debug-adapter-protocol-and-scala
+    fn get_dap_binary(
+        &mut self,
+        adapter_name: String,
+        config: DebugTaskDefinition,
+        _user_provided_debug_adapter_path: Option<String>,
+        worktree: &Worktree,
+    ) -> Result<DebugAdapterBinary, String> {
+        if adapter_name != LSP_DAP_NAME {
+            return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
+        }
+
+        // Parse user-provided debug configuration
+        let conf = Value::from_str(config.config.as_str())
+            .map_err(|e| format!("Invalid JSON configuration: {e}"))?;
+        // Determine debug mode (lauch or attach)
+        let request_kind = self.dap_request_kind(adapter_name, conf.clone())?;
+        // Check and enrich debug configuration with default values
+        let arguments = self.dap.init_config(conf)?;
+        // Return debug configuration back to Zed
+        let arguments_json = serde_json::to_string(&arguments)
+            .map_err(|e| format!("Cannot create debug taks definition: {e}"))?;
+        let request_args = StartDebuggingRequestArguments {
+            request: request_kind,
+            configuration: arguments_json,
+        };
+
+        // Start the debugger with provided arguments for current workspace
+        let workspace = worktree.root_path();
+        let connection = Some(zed::resolve_tcp_template(
+            self.dap.start(&workspace, &arguments)?,
+        )?);
+
+        // Return connection to already started debugger
+        Ok(DebugAdapterBinary {
+            command: None,
+            arguments: vec![],
+            cwd: Some(workspace),
+            envs: vec![],
+            request_args,
+            connection,
+        })
+    }
+
+    // This method returns debug mode (launch or attach) based on configuration provided by user
+    fn dap_request_kind(
+        &mut self,
+        adapter_name: String,
+        config: Value,
+    ) -> Result<StartDebuggingRequestArgumentsRequest, String> {
+        if adapter_name != LSP_DAP_NAME {
+            return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
+        }
+
+        match config.get("request") {
+            Some(req) if req == "launch" => Ok(StartDebuggingRequestArgumentsRequest::Launch),
+            Some(req) if req == "attach" => Ok(StartDebuggingRequestArgumentsRequest::Attach),
+            Some(req) => Err(format!(
+                "Unexpected value for `request` key in Metals debug configuration: {req:?}"
+            )),
+            None => Err("Missing required `request` field in Metals debug configuration".into()),
+        }
     }
 }
 
