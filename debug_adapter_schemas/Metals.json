@@ -56,8 +56,7 @@
               "properties": {
                 "path": {
                   "type": "string",
-                  "default": "$ZED_FILE",
-                  "description": "Path to the file to be debugged used by Metals discovery"
+                  "description": "Absolute path to the file to be debugged, used by Metals discovery; may be $ZED_FILE"
                 },
                 "runType": {
                   "type": "string",
@@ -67,7 +66,7 @@
                     "testFile",
                     "testTarget"
                   ],
-                  "default": "runOrTestFile",
+                  "default": "run",
                   "description": "The run type for Metals discovery"
                 }
               },
@@ -127,9 +126,7 @@
         }
       },
       "required": [
-        "request",
-        "hostName",
-        "port"
+        "request"
       ]
     }
   ]
