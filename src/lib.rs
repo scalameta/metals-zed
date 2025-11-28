@@ -1,4 +1,9 @@
-use std::{env, str::FromStr};
+use std::{
+    collections::HashSet,
+    env,
+    str::FromStr,
+    sync::{Arc, RwLock},
+};
 
 use zed_extension_api::{
     self as zed, CodeLabel, CodeLabelSpan, DebugAdapterBinary, DebugTaskDefinition, Extension,
@@ -19,13 +24,15 @@ const PROXY_CODE: &str = include_str!("proxy.mjs");
 const USE_PROXY: bool = true;
 
 struct ScalaExtension {
-    dap: Debugger, // DAP specific methods
+    dap: Debugger,                           // DAP specific methods
+    wrks_lock: Arc<RwLock<HashSet<String>>>, // List of initialized workspaces - set by LSP, checked by DAP
 }
 
 impl Extension for ScalaExtension {
     fn new() -> Self {
         Self {
             dap: Debugger::new(),
+            wrks_lock: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
@@ -69,6 +76,14 @@ impl Extension for ScalaExtension {
             ];
             // Add arguments for Metals to pass them through
             args.extend(arguments.to_owned());
+
+            // Add current workspace to the set of initialized workspaces (for DAP)
+            let workspace = worktree.root_path();
+            let mut workspaces = self
+                .wrks_lock
+                .write()
+                .map_err(|e| format!("Could not mark current workspace as initialized: {e}"))?;
+            workspaces.insert(workspace);
 
             Ok(zed::Command {
                 command: zed::node_binary_path()?, // Node is used to start the proxy
@@ -179,6 +194,22 @@ impl Extension for ScalaExtension {
             return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
         }
 
+        let workspace = worktree.root_path();
+        if USE_PROXY {
+            // Check if LSP has been initialized for the current workspace and thus is able to start DAP.
+            let workspaces = self
+                .wrks_lock
+                .read()
+                .map_err(|e| format!("Could not check current workspace: {e}"))?;
+            if !workspaces.contains(&workspace) {
+                return Err(format!(
+                    "The Metals LSP server hasn't been started yet for the current workspace {workspace}. Trigger LSP initialization before debugging."
+                ));
+            }
+        } else {
+            return Err(format!("DAP is not supported by Scala extension"));
+        }
+
         // Parse user-provided debug configuration
         let conf = Value::from_str(config.config.as_str())
             .map_err(|e| format!("Invalid JSON configuration: {e}"))?;
@@ -195,7 +226,7 @@ impl Extension for ScalaExtension {
         };
 
         // Start the debugger with provided arguments for current workspace
-        let workspace = worktree.root_path();
+        // let workspace = worktree.root_path();
         let connection = Some(zed::resolve_tcp_template(
             self.dap.start(&workspace, &arguments)?,
         )?);
