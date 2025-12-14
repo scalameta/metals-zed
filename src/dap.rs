@@ -11,7 +11,7 @@ use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use zed_extension_api::{
-    self as zed, TcpArgumentsTemplate,
+    self as zed, DebugConfig, DebugRequest, TcpArgumentsTemplate,
     http_client::{self as http, HttpMethod, HttpRequest},
     serde_json::{self, Map, Value, json},
 };
@@ -36,7 +36,6 @@ pub enum ScalaDebugTaskDefinition {
 // For launching vs attaching see https://zed.dev/docs/debugger#launching--attaching
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ScalaDebugLauchDefinition {
-    #[serde(skip_serializing)]
     request: String,
     #[serde(flatten)]
     entry: EntryPoint,
@@ -58,13 +57,14 @@ pub struct ScalaDebugLauchDefinition {
 // Debugging configuration for attach mode
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ScalaDebugAttachDefinition {
-    #[serde(skip_serializing)]
     request: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "buildTaget")]
     build_taget: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hostName")]
     host_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     port: Option<u16>,
 }
 
@@ -154,13 +154,12 @@ impl Debugger {
     // Although they are mainly provided by user through debugger configuration in `debug_task_def`
     // (see: https://zed.dev/docs/debugger#configuration), this method verifies key ones
     // and provides default values where possible.
-    pub fn init_config(&self, debug_task_def: Value) -> zed::Result<ScalaDebugTaskDefinition> {
-        // Parse the user-provided debug configuration
-        // Please note, that "label" and "adapter", required by Zed, are stripped before passing to extension
-        let parsed: ScalaDebugTaskDefinition = serde_json::from_value(debug_task_def)
-            .map_err(|e| format!("Cannot parse debug taks definition: {e}"))?;
-
-        match parsed.clone() {
+    pub fn enrich_config(
+        &self,
+        workspace: &str,
+        debug_task_def: ScalaDebugTaskDefinition,
+    ) -> zed::Result<ScalaDebugTaskDefinition> {
+        match debug_task_def.clone() {
             // Launch mode
             ScalaDebugTaskDefinition::Launch(config) if config.request == "launch" => {
                 match config.entry {
@@ -171,7 +170,7 @@ impl Debugger {
                         let path = if path.starts_with("file://") {
                             path
                         } else {
-                            format!("file://{path}")
+                            format!("file://{}", full_path(&path, workspace))
                         };
                         let run_type = run_type.or(Some(DEFAULT_LAUNCH_RUN_TYPE.to_string()));
                         let config = ScalaDebugLauchDefinition {
@@ -181,9 +180,9 @@ impl Debugger {
                         Ok(ScalaDebugTaskDefinition::Launch(config))
                     }
                     // No defaults for mainClass
-                    EntryPoint::Main { main_class: _ } => Ok(parsed),
+                    EntryPoint::Main { main_class: _ } => Ok(debug_task_def),
                     // No defaults for testClass
-                    EntryPoint::Test { test_class: _ } => Ok(parsed),
+                    EntryPoint::Test { test_class: _ } => Ok(debug_task_def),
                 }
             }
             // Attach mode - provide default host and port if missing
@@ -200,6 +199,52 @@ impl Debugger {
                 Ok(ScalaDebugTaskDefinition::Attach(config))
             }
             _ => Err(format!("Incorrect format of debug task definition")),
+        }
+    }
+
+    // Create basic Metals' specific debug task definition based on general Zed's debug task.
+    // Leave optional arguments empty to be enriched with default values.
+    pub fn convert_generic_config(&self, generic_config: DebugConfig) -> ScalaDebugTaskDefinition {
+        match generic_config.request {
+            // For lauch request start DAP in autodiscover mode
+            DebugRequest::Launch(launch_request) => {
+                let entry = EntryPoint::Auto {
+                    path: launch_request
+                        .cwd
+                        .map(|cwd| full_path(&launch_request.program, &cwd))
+                        .unwrap_or(launch_request.program),
+                    run_type: None,
+                };
+                let config = ScalaDebugLauchDefinition {
+                    request: "launch".to_string(),
+                    entry,
+                    build_taget: None,
+                    args: if launch_request.args.is_empty() {
+                        None
+                    } else {
+                        Some(launch_request.args)
+                    },
+                    jvm_options: None,
+                    env: if launch_request.envs.is_empty() {
+                        None
+                    } else {
+                        Some(launch_request.envs.into_iter().collect())
+                    },
+                    env_file: None,
+                };
+                ScalaDebugTaskDefinition::Launch(config)
+            }
+            // Metals don't support attaching to a process by ID,
+            // so we cannot use the provided process identifier and must fall back to the defaults.
+            DebugRequest::Attach(_attach_request) => {
+                let config = ScalaDebugAttachDefinition {
+                    request: "attach".to_string(),
+                    build_taget: None,
+                    host_name: None,
+                    port: None,
+                };
+                ScalaDebugTaskDefinition::Attach(config)
+            }
         }
     }
 
@@ -267,4 +312,15 @@ fn string_to_hex(s: &str) -> String {
         hex_string.push_str(&format!("{:02x}", byte));
     }
     hex_string
+}
+
+// Check if path is full (absolute) and if not prefix it with base
+fn full_path(path: &str, base: &str) -> String {
+    let p_path = Path::new(path);
+    if p_path.is_absolute() {
+        path.to_string()
+    } else {
+        let p_base = Path::new(base);
+        p_base.join(p_path).to_string_lossy().to_string()
+    }
 }

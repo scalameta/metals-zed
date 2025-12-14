@@ -6,14 +6,15 @@ use std::{
 };
 
 use zed_extension_api::{
-    self as zed, CodeLabel, CodeLabelSpan, DebugAdapterBinary, DebugTaskDefinition, Extension,
-    Result, StartDebuggingRequestArguments, StartDebuggingRequestArgumentsRequest, Worktree,
+    self as zed, CodeLabel, CodeLabelSpan, DebugAdapterBinary, DebugConfig, DebugScenario,
+    DebugTaskDefinition, Extension, Result, StartDebuggingRequestArguments,
+    StartDebuggingRequestArgumentsRequest, Worktree,
     lsp::{Completion, CompletionKind, Symbol, SymbolKind},
     serde_json::{self, Value},
     settings::LspSettings,
 };
 
-use crate::dap::Debugger;
+use crate::dap::{Debugger, ScalaDebugTaskDefinition};
 
 mod dap;
 
@@ -78,6 +79,8 @@ impl Extension for ScalaExtension {
             args.extend(arguments.to_owned());
 
             // Add current workspace to the set of initialized workspaces (for DAP)
+            // Unfortunately, LSP isn't initialized yet, and this doesn't prevent calling the DAP too early,
+            // but there is no handler to implement it in a proper way
             let workspace = worktree.root_path();
             let mut workspaces = self
                 .wrks_lock
@@ -210,13 +213,18 @@ impl Extension for ScalaExtension {
             return Err(format!("DAP is not supported by Scala extension"));
         }
 
-        // Parse user-provided debug configuration
+        // Parse the user-provided debug configuration
+        // Please note, that "label" and "adapter", required by Zed, are stripped before passing to extension
         let conf = Value::from_str(config.config.as_str())
             .map_err(|e| format!("Invalid JSON configuration: {e}"))?;
+        let scala_conf: ScalaDebugTaskDefinition = serde_json::from_value(conf.clone())
+            .map_err(|e| format!("Cannot parse debug taks definition: {e}"))?;
+
         // Determine debug mode (lauch or attach)
-        let request_kind = self.dap_request_kind(adapter_name, conf.clone())?;
+        let request_kind = self.dap_request_kind(adapter_name, conf)?;
         // Check and enrich debug configuration with default values
-        let arguments = self.dap.init_config(conf)?;
+        let arguments = self.dap.enrich_config(&workspace, scala_conf)?;
+
         // Return debug configuration back to Zed
         let arguments_json = serde_json::to_string(&arguments)
             .map_err(|e| format!("Cannot create debug taks definition: {e}"))?;
@@ -226,7 +234,6 @@ impl Extension for ScalaExtension {
         };
 
         // Start the debugger with provided arguments for current workspace
-        // let workspace = worktree.root_path();
         let connection = Some(zed::resolve_tcp_template(
             self.dap.start(&workspace, &arguments)?,
         )?);
@@ -260,6 +267,35 @@ impl Extension for ScalaExtension {
             )),
             None => Err("Missing required `request` field in Metals debug configuration".into()),
         }
+    }
+
+    // Method to convert a standard debug configuration, with basic user input user,
+    // into a configuration required by Metals.
+    fn dap_config_to_scenario(
+        &mut self,
+        generic_config: DebugConfig,
+    ) -> Result<DebugScenario, String> {
+        if generic_config.adapter != LSP_DAP_NAME {
+            return Err(format!(
+                "Cannot create configuration for adapter \"{}\"",
+                generic_config.adapter
+            ));
+        }
+        // Create Scala specific debug task definition based on generic one
+        let scala_config = self.dap.convert_generic_config(generic_config.clone());
+
+        // Return debug configuration back to Zed
+        let arguments_json = serde_json::to_string(&scala_config).map_err(|e| {
+            format!("Cannot create debug taks definition based on generic one: {e}")
+        })?;
+
+        Ok(DebugScenario {
+            label: generic_config.label,
+            adapter: generic_config.adapter,
+            build: None,
+            config: arguments_json,
+            tcp_connection: None,
+        })
     }
 }
 

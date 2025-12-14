@@ -206,7 +206,7 @@ bloop run $project_name -m "$package_name.$mainname"
 
 ## Debugging (for JVM)
 
-The extension supports debugging through DAP (Debug Adapter Protocol). To debug your Scala code, you need to provide a proper debug task definition. Please see [Zed Debugger](https://zed.dev/docs/debugger), and specifically [its configuration](https://zed.dev/docs/debugger#configuration), for general overview.
+The extension supports debugging through DAP (Debug Adapter Protocol). To debug your Scala code, you typically need to provide a proper debug task definition. Please see [Zed Debugger](https://zed.dev/docs/debugger), and specifically [its configuration](https://zed.dev/docs/debugger#configuration), for general overview. In simple cases, you may spawn the debugger without a definition - see [Generic configuration](#generic-configuration) below for the details.
 
 You may define global and local (per workspace) debug task definitions. The local definitions go into `.zed/debug.json` - you may open or create the file through Zed's menu: `Run/Edit debug.json`. Access to the global ones is described in  [Global debug configurations](https://zed.dev/docs/debugger#global-debug-configurations).
 You may define as many debug task definitions as you like - they will be available to select in the `Run/Start Debugger` menu.
@@ -239,7 +239,7 @@ The simplest and most general way of starting a debug session is through configu
     "runType": "run"
   }
 ```
-The (absolute) `path` has to point to a Scala source file in your project which should be run (main or test depending on `runType`). If the file doesn't contain a runnable method, Metals will try to identify one in the current project and build target (see more about build targets below). Please note that the main and test sources form two build targets. This means that autodiscovery won't work for the main class if a test file is indicated and vice versa.
+The `path` has to point to a Scala source file in your project that should be run (main or test, depending on `runType`). If a relative path is provided, it will get prefixed with the workspace root. If the file doesn't contain a runnable method, Metals will try to identify one in the current project and build target (see more about build targets below). Please note that the main and test sources form two build targets. This means that autodiscovery won't work for the main class if a test file is indicated and vice versa.
 
 Zed supports [task variables](https://zed.dev/docs/tasks#variables) in debug task definitions. `$ZED_FILE` is especially handy for debugging scenarios - it is replaced with the full path of the currently open file. This makes the above definition quite universal and suitable for global configuration.
 
@@ -340,6 +340,23 @@ The debug task configuration for attach mode has the following form:
   }
 ```
 Both `hostName` and `port` may be omitted if the default values (`"localhost"` and `5005` respectively) should be used.
+
+### Generic configuration
+
+In addition to the main debug menu, Zed also provides generic `Attach` and `Launch` UIs. Please note that in both cases, you need to select the `Metals` debugger in the pull-down.
+
+In the `attach` mode, as Metals don’t support attaching to a program by its process id, selecting any process from the list causes the debugger to attach to the default host and port, as described in the previous section.
+
+For the `launch` mode, the provided program is interpreted as the path used by Metals' autodiscovery, with default runType, as described in the [Launching](#launching) section. If you provide a relative path to the program, it will be added to the working directory to get the absolute path. If a full path is provided, the working directory is ignored. You may set environment variables and provide parameters to the launched program, as the prompt in the launch UI suggests.
+
+### Limitations and known problems
+
+For the debug session to start, make sure the Metals LSP server is up and running. If not, you can get one of the following errors:
+- `The Metals LSP server hasn't been started yet for the current workspace ...`
+- `-32602 Could not find '' build target `
+- `-32600 No build target could be found for the path: ...`
+
+While trying to set a breakpoint in a test method, Zed (as of v0.216.1) throws an error: ``invalid value: integer `-1`, expected u64``.
 
 ## Releasing the extension
 To release the extension, you need to bump the version in `Cargo.toml` and `extension.toml` in the root of the repository and create a tag for the version (example bump: [e8b826cb3fc0f5f054aa0012e17824f8904a73f5](https://github.com/scalameta/metals-zed/commit/e8b826cb3fc0f5f054aa0012e17824f8904a73f5).
