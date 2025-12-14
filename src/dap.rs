@@ -11,7 +11,7 @@ use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use zed_extension_api::{
-    self as zed, DebugConfig, DebugRequest, TcpArgumentsTemplate,
+    self as zed,
     http_client::{self as http, HttpMethod, HttpRequest},
     serde_json::{self, Map, Value, json},
 };
@@ -119,18 +119,13 @@ struct DapStartResult {
 pub struct Debugger;
 
 impl Debugger {
-    pub fn new() -> Self {
-        Self
-    }
-
     // Starts the debugger by sending "debug-adapter-start" request to Metals
     pub fn start(
-        &self,
         workspace: &str,
         arguments: &ScalaDebugTaskDefinition,
-    ) -> zed::Result<TcpArgumentsTemplate> {
+    ) -> zed::Result<zed::TcpArgumentsTemplate> {
         // Send the "debug-adapter-start" request to LSP
-        let response = self.lsp_request::<DapStartResult>(
+        let response = Debugger::lsp_request::<DapStartResult>(
             workspace,
             LSP_REQUEST,
             json!({
@@ -143,7 +138,7 @@ impl Debugger {
         let port = get_port_from_uri(response.uri.as_str())?;
 
         // Return TCP connection data
-        Ok(TcpArgumentsTemplate {
+        Ok(zed::TcpArgumentsTemplate {
             host: None,
             port: Some(port),
             timeout: None,
@@ -155,7 +150,6 @@ impl Debugger {
     // (see: https://zed.dev/docs/debugger#configuration), this method verifies key ones
     // and provides default values where possible.
     pub fn enrich_config(
-        &self,
         workspace: &str,
         debug_task_def: ScalaDebugTaskDefinition,
     ) -> zed::Result<ScalaDebugTaskDefinition> {
@@ -204,10 +198,10 @@ impl Debugger {
 
     // Create basic Metals' specific debug task definition based on general Zed's debug task.
     // Leave optional arguments empty to be enriched with default values.
-    pub fn convert_generic_config(&self, generic_config: DebugConfig) -> ScalaDebugTaskDefinition {
+    pub fn convert_generic_config(generic_config: zed::DebugConfig) -> ScalaDebugTaskDefinition {
         match generic_config.request {
             // For lauch request start DAP in autodiscover mode
-            DebugRequest::Launch(launch_request) => {
+            zed::DebugRequest::Launch(launch_request) => {
                 let entry = EntryPoint::Auto {
                     path: launch_request
                         .cwd
@@ -236,7 +230,7 @@ impl Debugger {
             }
             // Metals don't support attaching to a process by ID,
             // so we cannot use the provided process identifier and must fall back to the defaults.
-            DebugRequest::Attach(_attach_request) => {
+            zed::DebugRequest::Attach(_attach_request) => {
                 let config = ScalaDebugAttachDefinition {
                     request: "attach".to_string(),
                     build_taget: None,
@@ -249,7 +243,7 @@ impl Debugger {
     }
 
     // Send request to Metals through the proxy-exposed HTTP port
-    fn lsp_request<T>(&self, workspace: &str, method: &str, params: Value) -> Result<T, String>
+    fn lsp_request<T>(workspace: &str, method: &str, params: Value) -> zed::Result<T>
     where
         T: DeserializeOwned,
     {
@@ -294,7 +288,7 @@ impl Debugger {
 }
 
 // Retrieve port number from URI
-fn get_port_from_uri(s: &str) -> Result<u16, String> {
+fn get_port_from_uri(s: &str) -> zed::Result<u16> {
     s.rsplit_once(':') // split the string at the last colon
         .ok_or("Cannot find port part in the URI".to_string())
         .and_then(|(_, port_str)| {

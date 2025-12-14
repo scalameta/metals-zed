@@ -6,14 +6,13 @@ use std::{
 };
 
 use zed_extension_api::{
-    self as zed, CodeLabel, CodeLabelSpan, DebugAdapterBinary, DebugConfig, DebugScenario,
-    DebugTaskDefinition, Extension, Result, StartDebuggingRequestArguments,
-    StartDebuggingRequestArgumentsRequest, Worktree,
+    self as zed,
     lsp::{Completion, CompletionKind, Symbol, SymbolKind},
     serde_json::{self, Value},
     settings::LspSettings,
 };
 
+// DAP specific methods
 use crate::dap::{Debugger, ScalaDebugTaskDefinition};
 
 mod dap;
@@ -25,14 +24,12 @@ const PROXY_CODE: &str = include_str!("proxy.mjs");
 const USE_PROXY: bool = true;
 
 struct ScalaExtension {
-    dap: Debugger,                           // DAP specific methods
     wrks_lock: Arc<RwLock<HashSet<String>>>, // List of initialized workspaces - set by LSP, checked by DAP
 }
 
-impl Extension for ScalaExtension {
+impl zed::Extension for ScalaExtension {
     fn new() -> Self {
         Self {
-            dap: Debugger::new(),
             wrks_lock: Arc::new(RwLock::new(HashSet::new())),
         }
     }
@@ -42,7 +39,7 @@ impl Extension for ScalaExtension {
         &mut self,
         _language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
-    ) -> Result<zed::Command> {
+    ) -> zed::Result<zed::Command> {
         let metals_path = worktree
             .which(LSP_DAP_NAME)
             .ok_or_else(|| "Metals must be installed manually. Recommended way is to install coursier (https://get-coursier.io/), and then run `cs install metals`.".to_string())?;
@@ -104,9 +101,9 @@ impl Extension for ScalaExtension {
 
     fn language_server_initialization_options(
         &mut self,
-        _language_server_id: &zed_extension_api::LanguageServerId,
-        worktree: &zed_extension_api::Worktree,
-    ) -> Result<Option<serde_json::Value>> {
+        _language_server_id: &zed::LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> zed::Result<Option<serde_json::Value>> {
         let initialization_options = LspSettings::for_worktree("metals", worktree)
             .map(|lsp_settings| lsp_settings.initialization_options.clone());
 
@@ -117,7 +114,7 @@ impl Extension for ScalaExtension {
         &mut self,
         _language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
-    ) -> Result<Option<serde_json::Value>> {
+    ) -> zed::Result<Option<serde_json::Value>> {
         let settings = LspSettings::for_worktree("metals", worktree)
             .ok()
             .and_then(|lsp_settings| lsp_settings.settings.clone())
@@ -130,9 +127,9 @@ impl Extension for ScalaExtension {
 
     fn label_for_completion(
         &self,
-        _language_server_id: &zed_extension_api::LanguageServerId,
+        _language_server_id: &zed::LanguageServerId,
         completion: Completion,
-    ) -> Option<zed_extension_api::CodeLabel> {
+    ) -> Option<zed::CodeLabel> {
         let prefix = match completion.kind? {
             CompletionKind::Method | CompletionKind::Function => "def ",
             CompletionKind::Constructor
@@ -151,9 +148,9 @@ impl Extension for ScalaExtension {
         let name = completion.label.replace("  ", " ").replace("\n", "");
         let code = format!("{prefix}{name}");
         let code_len = code.len();
-        Some(CodeLabel {
+        Some(zed::CodeLabel {
             code,
-            spans: vec![CodeLabelSpan::code_range(prefix.len()..code_len)],
+            spans: vec![zed::CodeLabelSpan::code_range(prefix.len()..code_len)],
             filter_range: (0..name.len()).into(),
         })
     }
@@ -162,7 +159,7 @@ impl Extension for ScalaExtension {
         &self,
         _language_server_id: &zed_extension_api::LanguageServerId,
         symbol: Symbol,
-    ) -> Option<CodeLabel> {
+    ) -> Option<zed::CodeLabel> {
         let prefix = match symbol.kind {
             SymbolKind::Module
             | SymbolKind::Class
@@ -176,9 +173,9 @@ impl Extension for ScalaExtension {
         let name = symbol.name;
         let code = format!("{prefix}{name}");
         let code_len = code.len();
-        Some(CodeLabel {
+        Some(zed::CodeLabel {
             code,
-            spans: vec![CodeLabelSpan::code_range(prefix.len()..code_len)],
+            spans: vec![zed::CodeLabelSpan::code_range(prefix.len()..code_len)],
             filter_range: (0..name.len()).into(),
         })
     }
@@ -189,10 +186,10 @@ impl Extension for ScalaExtension {
     fn get_dap_binary(
         &mut self,
         adapter_name: String,
-        config: DebugTaskDefinition,
+        config: zed::DebugTaskDefinition,
         _user_provided_debug_adapter_path: Option<String>,
-        worktree: &Worktree,
-    ) -> Result<DebugAdapterBinary, String> {
+        worktree: &zed::Worktree,
+    ) -> zed::Result<zed::DebugAdapterBinary> {
         if adapter_name != LSP_DAP_NAME {
             return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
         }
@@ -223,23 +220,23 @@ impl Extension for ScalaExtension {
         // Determine debug mode (lauch or attach)
         let request_kind = self.dap_request_kind(adapter_name, conf)?;
         // Check and enrich debug configuration with default values
-        let arguments = self.dap.enrich_config(&workspace, scala_conf)?;
+        let arguments = Debugger::enrich_config(&workspace, scala_conf)?;
 
         // Return debug configuration back to Zed
         let arguments_json = serde_json::to_string(&arguments)
             .map_err(|e| format!("Cannot create debug taks definition: {e}"))?;
-        let request_args = StartDebuggingRequestArguments {
+        let request_args = zed::StartDebuggingRequestArguments {
             request: request_kind,
             configuration: arguments_json,
         };
 
         // Start the debugger with provided arguments for current workspace
-        let connection = Some(zed::resolve_tcp_template(
-            self.dap.start(&workspace, &arguments)?,
-        )?);
+        let connection = Some(zed::resolve_tcp_template(Debugger::start(
+            &workspace, &arguments,
+        )?)?);
 
         // Return connection to already started debugger
-        Ok(DebugAdapterBinary {
+        Ok(zed::DebugAdapterBinary {
             command: None,
             arguments: vec![],
             cwd: Some(workspace),
@@ -254,14 +251,14 @@ impl Extension for ScalaExtension {
         &mut self,
         adapter_name: String,
         config: Value,
-    ) -> Result<StartDebuggingRequestArgumentsRequest, String> {
+    ) -> zed::Result<zed::StartDebuggingRequestArgumentsRequest> {
         if adapter_name != LSP_DAP_NAME {
             return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
         }
 
         match config.get("request") {
-            Some(req) if req == "launch" => Ok(StartDebuggingRequestArgumentsRequest::Launch),
-            Some(req) if req == "attach" => Ok(StartDebuggingRequestArgumentsRequest::Attach),
+            Some(req) if req == "launch" => Ok(zed::StartDebuggingRequestArgumentsRequest::Launch),
+            Some(req) if req == "attach" => Ok(zed::StartDebuggingRequestArgumentsRequest::Attach),
             Some(req) => Err(format!(
                 "Unexpected value for `request` key in Metals debug configuration: {req:?}"
             )),
@@ -273,8 +270,8 @@ impl Extension for ScalaExtension {
     // into a configuration required by Metals.
     fn dap_config_to_scenario(
         &mut self,
-        generic_config: DebugConfig,
-    ) -> Result<DebugScenario, String> {
+        generic_config: zed::DebugConfig,
+    ) -> zed::Result<zed::DebugScenario> {
         if generic_config.adapter != LSP_DAP_NAME {
             return Err(format!(
                 "Cannot create configuration for adapter \"{}\"",
@@ -282,14 +279,14 @@ impl Extension for ScalaExtension {
             ));
         }
         // Create Scala specific debug task definition based on generic one
-        let scala_config = self.dap.convert_generic_config(generic_config.clone());
+        let scala_config = Debugger::convert_generic_config(generic_config.clone());
 
         // Return debug configuration back to Zed
         let arguments_json = serde_json::to_string(&scala_config).map_err(|e| {
             format!("Cannot create debug taks definition based on generic one: {e}")
         })?;
 
-        Ok(DebugScenario {
+        Ok(zed::DebugScenario {
             label: generic_config.label,
             adapter: generic_config.adapter,
             build: None,
