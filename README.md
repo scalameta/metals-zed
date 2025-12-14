@@ -204,6 +204,76 @@ package_name=$(cat $filepath | grep -E '^package ' | sed 's/package //') # Extra
 bloop run $project_name -m "$package_name.$mainname"
 ```
 
+## Running tasks without bloop
+
+An alternative method to run the main class is to call `sbt`, `scala-cli`, or any other build tool directly.
+For `sbt` and `scala-cli`, the task definitions may look like the ones below:
+```json
+[
+  {
+    "label": "Run with sbt",
+    "command": "sbt run",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-main"
+    ]
+  },
+  {
+    "label": "Run curent file with scala-cli",
+    "command": "scala-cli run $ZED_FILE",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-main"
+    ]
+  }
+]
+```
+For `scala-cli` you have to have the main class open in the active window.
+
+Similarly, it is possible to run tests from the file in the active window:
+```json
+[
+  {
+    "label": "Run current test suite with sbt",
+    "command": "sbt 'testOnly *.$ZED_SYMBOL'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  },
+  {
+    "label": "Run current test suite with scala-cli",
+    "command": "scala-cli test . --test-only '*$ZED_SYMBOL'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  }
+]
+```
+or even a selected test case:
+```json
+[
+  {
+    "label": "Run selected test with sbt",
+    "command": "sbt 'testOnly -- -z \"$ZED_SELECTED_TEXT\"'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  },
+  {
+    "label": "Run selected test with scala-cli",
+    "command": "scala-cli test . --test-only '*$ZED_SYMBOL' -- '*$ZED_SELECTED_TEXT*'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  }
+]
+```
+In the examples above, all tests with names containing the selected test will be run.
+
 ## Debugging (for JVM)
 
 The extension supports debugging through DAP (Debug Adapter Protocol). To debug your Scala code, you typically need to provide a proper debug task definition. Please see [Zed Debugger](https://zed.dev/docs/debugger), and specifically [its configuration](https://zed.dev/docs/debugger#configuration), for general overview. In simple cases, you may spawn the debugger without a definition - see [Generic configuration](#generic-configuration) below for the details.
