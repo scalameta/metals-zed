@@ -413,11 +413,13 @@ Both `hostName` and `port` may be omitted if the default values (`"localhost"` a
 
 ### Generic configuration
 
-In addition to the main debug menu, Zed also provides generic `Attach` and `Launch` UIs. Please note that in both cases, you need to select the `Metals` debugger in the pull-down.
+In addition to the main debug menu, Zed also provides generic `Attach` and `Launch` UIs.
 
-In the `attach` mode, as Metals don’t support attaching to a program by its process id, selecting any process from the list causes the debugger to attach to the default host and port, as described in the previous section.
+As Metals don’t support attaching to a program by its process id, the generic `attach` option isn't available for Scala (there will be no reaction from the UI if you try to attach to a process).
 
 For the `launch` mode, the provided program is interpreted as the path used by Metals' autodiscovery, with default runType, as described in the [Launching](#launching) section. If you provide a relative path to the program, it will be added to the working directory to get the absolute path. If a full path is provided, the working directory is ignored. You may set environment variables and provide parameters to the launched program, as the prompt in the launch UI suggests.
+
+Please note that you need to select `Metals` in the pull-down with available debuggers.
 
 ### Limitations and known problems
 

@@ -198,7 +198,9 @@ impl Debugger {
 
     // Create basic Metals' specific debug task definition based on general Zed's debug task.
     // Leave optional arguments empty to be enriched with default values.
-    pub fn convert_generic_config(generic_config: zed::DebugConfig) -> ScalaDebugTaskDefinition {
+    pub fn convert_generic_config(
+        generic_config: zed::DebugConfig,
+    ) -> zed::Result<ScalaDebugTaskDefinition> {
         match generic_config.request {
             // For lauch request start DAP in autodiscover mode
             zed::DebugRequest::Launch(launch_request) => {
@@ -226,18 +228,13 @@ impl Debugger {
                     },
                     env_file: None,
                 };
-                ScalaDebugTaskDefinition::Launch(config)
+                Ok(ScalaDebugTaskDefinition::Launch(config))
             }
-            // Metals don't support attaching to a process by ID,
-            // so we cannot use the provided process identifier and must fall back to the defaults.
+            // Metals don't support attaching to a process by ID
             zed::DebugRequest::Attach(_attach_request) => {
-                let config = ScalaDebugAttachDefinition {
-                    request: "attach".to_string(),
-                    build_taget: None,
-                    host_name: None,
-                    port: None,
-                };
-                ScalaDebugTaskDefinition::Attach(config)
+                Err("Scala DAP doesn't support attaching to a process by id.
+                  Provide debug task definition with a debug port to attach to a running program"
+                    .to_string())
             }
         }
     }

@@ -279,7 +279,7 @@ impl zed::Extension for ScalaExtension {
             ));
         }
         // Create Scala specific debug task definition based on generic one
-        let scala_config = Debugger::convert_generic_config(generic_config.clone());
+        let scala_config = Debugger::convert_generic_config(generic_config.clone())?;
 
         // Return debug configuration back to Zed
         let arguments_json = serde_json::to_string(&scala_config).map_err(|e| {
