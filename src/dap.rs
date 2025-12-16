@@ -19,7 +19,7 @@ use zed_extension_api::{
 const LSP_REQUEST: &str = "workspace/executeCommand"; // LSP request to send a command
 const DAP_START_COMMAND: &str = "debug-adapter-start"; // The command send to LSP to initialize debugger
 const PROXY_FOLDER: &str = "proxy"; // The folder (inside Zed's `extentions/work/scala` folder) to put port info to
-const DEFAULT_LAUNCH_RUN_TYPE: &str = "run"; // Default runType for autodiscovery debugee launch mode
+const DEFAULT_LAUNCH_RUN_TYPE: &str = "runOrTestFile"; // Default runType for autodiscovery debugee launch mode
 const DEFAULT_ATTACH_HOST_NAME: &str = "localhost"; // Default hostName for debugee attach mode
 const DEFAULT_ATTACH_PORT: u16 = 5005; // Default port number for debugee attach mode
 

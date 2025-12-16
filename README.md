@@ -314,8 +314,8 @@ The `path` has to point to a Scala source file in your project that should be ru
 Zed supports [task variables](https://zed.dev/docs/tasks#variables) in debug task definitions. `$ZED_FILE` is especially handy for debugging scenarios - it is replaced with the full path of the currently open file. This makes the above definition quite universal and suitable for global configuration.
 
 Metals support the following `runType`s:
-- `"run"` - run the main method in the build target the indicated file belongs to - this is the default if `runTime` is omitted in the configuration,
-- `"runOrTestFile"` - run the main or test class in the indicated file,
+- `"run"` - run the main method in the build target the indicated file belongs to,
+- `"runOrTestFile"` - run the main or test class in the indicated file - this is the default if `runTime` is omitted in the configuration,
 - `"testFile"` - run test class in the indicated file,
 - `"testTarget"` - run all test classes in the build target the indicated file belongs to.
 
