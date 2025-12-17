@@ -423,6 +423,22 @@ Please note that you need to select `Metals` in the pull-down with available deb
 
 ### Limitations and known problems
 
+Server properties for Metals must not be configured in Zed settings. Configuring server properties in the settings (like the example below) causes Zed to use them directly instead of those provided by the extension, which currently causes the LSP to crash.
+```json
+{
+  "lsp": {
+    "metals": {
+      "binary": {
+        "arguments": [
+          "-Dmetals.http=on"
+        ]
+      }
+    }
+  }
+}
+```
+The `-Dmetals.http=on` property is added by the extension anyway.
+
 For the debug session to start, make sure the Metals LSP server is up and running. If not, you can get one of the following errors:
 - `The Metals LSP server hasn't been started yet for the current workspace ...`
 - `-32602 Could not find '' build target `
