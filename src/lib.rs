@@ -44,17 +44,20 @@ impl zed::Extension for ScalaExtension {
             .which(LSP_DAP_NAME)
             .ok_or_else(|| "Metals must be installed manually. Recommended way is to install coursier (https://get-coursier.io/), and then run `cs install metals`.".to_string())?;
 
-        let arguments = LspSettings::for_worktree("metals", worktree)
-            .map(|lsp_settings| {
-                lsp_settings
-                    .binary
-                    .and_then(|binary| binary.arguments)
-                    // If no arguments are provided, default to enabling the HTTP server.
-                    .unwrap_or(vec!["-Dmetals.http=on".to_string()])
-            })
+        let bin_args_opt = LspSettings::for_worktree("metals", worktree)
+            .map(|lsp_settings| lsp_settings.binary.and_then(|binary| binary.arguments))
             .unwrap_or_default();
 
-        if USE_PROXY {
+        // Due to https://github.com/zed-industries/zed/issues/45209 Zed ignores returned arguments
+        // if any are provided in the config file, rendering proxy start and thus DAP support impossible
+        let (arguments, dap_possible) = if let Some(args) = bin_args_opt {
+            (args, false)
+        } else {
+            // If no arguments are provided, default to enabling the HTTP server.
+            (vec!["-Dmetals.http=on".to_string()], true)
+        };
+
+        if USE_PROXY & dap_possible {
             // Get extension directory to store the proxy port number in dedicated file there
             let extension_dir = env::current_dir()
                 .map_err(|err| format!("Could not get current dir: {err}"))
@@ -91,6 +94,7 @@ impl zed::Extension for ScalaExtension {
                 env: worktree.shell_env(),
             })
         } else {
+            // Start Metals directly, without DAP support
             Ok(zed::Command {
                 command: metals_path,
                 args: arguments,
@@ -193,6 +197,15 @@ impl zed::Extension for ScalaExtension {
         if adapter_name != LSP_DAP_NAME {
             return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
         }
+
+        // Due to https://github.com/zed-industries/zed/issues/45209 Zed ignores returned arguments
+        // if any are provided in the config file, rendering proxy start and thus DAP support impossible
+        LspSettings::for_worktree("metals", worktree)
+            .map(|lsp_settings| lsp_settings.binary.and_then(|binary| binary.arguments))
+            .unwrap_or_default()
+            .map_or(Ok(()), |_| {
+                Err("DAP cannot start if any binary arguments for Metals are set in config file")
+            })?;
 
         let workspace = worktree.root_path();
         if USE_PROXY {

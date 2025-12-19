@@ -423,7 +423,7 @@ Please note that you need to select `Metals` in the pull-down with available deb
 
 ### Limitations and known problems
 
-Server properties for Metals must not be configured in Zed settings. Configuring server properties in the settings (like the example below) causes Zed to use them directly instead of those provided by the extension, which currently causes the LSP to crash.
+Server properties for Metals must not be configured in Zed settings. Configuring server properties in the settings (like the example below) causes Zed to [use them directly instead of those provided by the extension](https://github.com/zed-industries/zed/issues/45209), which currently causes the LSP to start **without DAP support**. If you try to start a debug session, you will receive the error: `DAP cannot start if any binary arguments for Metals are set in config file`.
 ```json
 {
   "lsp": {
@@ -437,7 +437,7 @@ Server properties for Metals must not be configured in Zed settings. Configuring
   }
 }
 ```
-The `-Dmetals.http=on` property is added by the extension anyway.
+Note: the `-Dmetals.http=on` property is added by the extension automatically, so it does not need to be included manually.
 
 For the debug session to start, make sure the Metals LSP server is up and running. If not, you can get one of the following errors:
 - `The Metals LSP server hasn't been started yet for the current workspace ...`
