@@ -204,6 +204,248 @@ package_name=$(cat $filepath | grep -E '^package ' | sed 's/package //') # Extra
 bloop run $project_name -m "$package_name.$mainname"
 ```
 
+## Running tasks without bloop
+
+An alternative method to run the main class is to call `sbt`, `scala-cli`, or any other build tool directly.
+For `sbt` and `scala-cli`, the task definitions may look like the ones below:
+```json
+[
+  {
+    "label": "Run with sbt",
+    "command": "sbt run",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-main"
+    ]
+  },
+  {
+    "label": "Run curent file with scala-cli",
+    "command": "scala-cli run $ZED_FILE",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-main"
+    ]
+  }
+]
+```
+For `scala-cli` you have to have the main class open in the active window.
+
+Similarly, it is possible to run tests from the file in the active window:
+```json
+[
+  {
+    "label": "Run current test suite with sbt",
+    "command": "sbt 'testOnly *.$ZED_SYMBOL'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  },
+  {
+    "label": "Run current test suite with scala-cli",
+    "command": "scala-cli test . --test-only '*$ZED_SYMBOL'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  }
+]
+```
+or even a selected test case:
+```json
+[
+  {
+    "label": "Run selected test with sbt",
+    "command": "sbt 'testOnly -- -z \"$ZED_SELECTED_TEXT\"'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  },
+  {
+    "label": "Run selected test with scala-cli",
+    "command": "scala-cli test . --test-only '*$ZED_SYMBOL' -- '*$ZED_SELECTED_TEXT*'",
+    "reveal": "no_focus",
+    "tags": [
+      "scala-test"
+    ]
+  }
+]
+```
+In the examples above, all tests with names containing the selected test will be run.
+
+## Debugging (for JVM)
+
+The extension supports debugging through DAP (Debug Adapter Protocol). To debug your Scala code, you typically need to provide a proper debug task definition. Please see [Zed Debugger](https://zed.dev/docs/debugger), and specifically [its configuration](https://zed.dev/docs/debugger#configuration), for general overview. In simple cases, you may spawn the debugger without a definition - see [Generic configuration](#generic-configuration) below for the details.
+
+You may define global and local (per workspace) debug task definitions. The local definitions go into `.zed/debug.json` - you may open or create the file through Zed's menu: `Run/Edit debug.json`. Access to the global ones is described in  [Global debug configurations](https://zed.dev/docs/debugger#global-debug-configurations).
+You may define as many debug task definitions as you like - they will be available to select in the `Run/Start Debugger` menu.
+
+JSON schema for the debug task definition may be found [here](debug_adapter_schemas/Metals.json). Keep reading for a less formal description.
+
+Three fields are required for any debug scenario:
+```json
+  {
+    "label": "My debug configuration",  // Your name of the configuration
+    "adapter": "Metals",  // Always "Metals"
+    "request": "launch" // "launch" or "attach" described below
+  }
+```
+The above fields are ZED-specific. The rest is [Metals-specific](https://scalameta.org/metals/docs/integrations/debug-adapter-protocol#via-explicit-main-or-test-commands). While reading Metals debugging documentation, bear in mind that running and debugging via code lenses is not supported in Zed.
+
+Debugging is possible in two modes, launching a new instance or attaching to a running one, as described in [Launching & Attaching](https://zed.dev/docs/debugger#launching--attaching) and below.
+
+### Launching
+
+For all launch scenarios, the `request` field must be set to `"launch"`.
+
+The simplest and most general way of starting a debug session is through configuration, which uses Metals autodiscovery:
+```json
+  {
+    "label": "Debug Scala - autodiscover",
+    "adapter": "Metals",
+    "request": "launch",
+    "path": "$ZED_FILE",
+    "runType": "run"
+  }
+```
+The `path` has to point to a Scala source file in your project that should be run (main or test, depending on `runType`). If a relative path is provided, it will get prefixed with the workspace root. If the file doesn't contain a runnable method, Metals will try to identify one in the current project and build target (see more about build targets below). Please note that the main and test sources form two build targets. This means that autodiscovery won't work for the main class if a test file is indicated and vice versa.
+
+Zed supports [task variables](https://zed.dev/docs/tasks#variables) in debug task definitions. `$ZED_FILE` is especially handy for debugging scenarios - it is replaced with the full path of the currently open file. This makes the above definition quite universal and suitable for global configuration.
+
+Metals support the following `runType`s:
+- `"run"` - run the main method in the build target the indicated file belongs to,
+- `"runOrTestFile"` - run the main or test class in the indicated file - this is the default if `runTime` is omitted in the configuration,
+- `"testFile"` - run test class in the indicated file,
+- `"testTarget"` - run all test classes in the build target the indicated file belongs to.
+
+You may provide additional parameters to the configuration:
+- `args` - array of arguments to pass to the launched method,
+- `jvmOptions` - Java virtual machine options (eg., memory settings),
+- `env` - environment variables,
+- `envFile` - file containing environment variables.
+If both `env` and `envFile` are provided, the `env` definitions take precedence over those in `envFile`. For a detailed description of the environment file format, see [Metals debugging documentation](https://scalameta.org/metals/docs/integrations/debug-adapter-protocol#via-explicit-main-or-test-commands).
+
+A full version of the debug launch configuration, which uses autodiscovery, may look as follows:
+```json
+  {
+    "label": "Debug Scala - autodiscover",
+    "adapter": "Metals",
+    "request": "launch",
+    "path": "/projects/foo/src/test/scala/dev/foo/FooTest.scala",
+    "runType": "testFile",
+    "args": ["bar","baz"],
+    "jvmOptions": ["-Xms1G", "-Xmx4G", "-Dproperty=123"],
+    "env": { "API_KEY": "a0b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9" },
+    "envFile": ".env"
+  }
+```
+  
+Instead of relying on Metals autodiscovery, you may provide the main or test class explicitly. The basic configuration in that case has the form
+```json
+  {
+    "label": "Debug Scala main class",
+    "adapter": "Metals",
+    "request": "launch",
+    "mainClass": "dev.foo.Foo"
+  }
+```
+for a main class or
+```json
+  {
+    "label": "Debug Scala test class",
+    "adapter": "Metals",
+    "request": "launch",
+    "testClass": "dev.foo.FooTest"
+  }
+```
+for a test class.
+Please note that for the main method in the form
+```scala
+package foo
+object App:
+  @main
+  def run: Unit = ???
+```
+the proper way to indicate the main class is `"mainClass" = "foo.run"`.
+
+All the additional parameters mentioned for autodiscovery (`args`, `jvmOptions`, `env` and `envFile`) may be provided to main and test class based configurations.
+
+For larger projects, when the same class name may be found in different modules, an additional parameter, `buildTarget`, may be required. The full version of a debug configuration with the main class may have the following form:
+```json
+  {
+    "label": "Debug Scala main class",
+    "adapter": "Metals",
+    "request": "launch",
+    "mainClass": "dev.foo.Foo",
+    "buildTarget": "foo-core_d5c0a6989e",
+    "args": ["bar","baz"],
+    "jvmOptions": ["-Xms1G", "-Xmx4G", "-Dproperty=123"],
+    "env": { "API_KEY": "a0b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9" },
+    "envFile": ".env"
+  }
+```
+Zed doesn't display the names of `buildTarget`s. To find them, Metals should have an HTTP server enabled (`-Dmetals.http=on` system property in LSP configuration), which allows Metals Doctor view under [localhost:5031/doctor](http://localhost:5031/doctor) or on any following port (`5032`, `5033`, etc.) if `5031` was already taken.
+
+### Attaching
+
+In addition to launching a program, you may attach to an already running one. The running program needs to expose a debug endpoint, which needs to pass special parameters to the JVM. When using `scala-cli`, [all you need is to run or test the application with `--debug` option](https://scala-cli.virtuslab.org/docs/cookbooks/introduction/debugging/):
+```shell
+scala-cli run foo.scala --debug
+```
+or
+```shell
+scala-cli test foo.test.scala --debug
+```
+The debug port will be displayed while starting the application.
+
+The debug task configuration for attach mode has the following form:
+```json
+  {
+    "label": "Attach to Scala program",
+    "adapter": "Metals",
+    "request": "attach",
+    "hostName": "localhost",
+    "port": 5005
+  }
+```
+Both `hostName` and `port` may be omitted if the default values (`"localhost"` and `5005` respectively) should be used.
+
+### Generic configuration
+
+In addition to the main debug menu, Zed also provides generic `Attach` and `Launch` UIs.
+
+As Metals don’t support attaching to a program by its process id, the generic `attach` option isn't available for Scala (there will be no reaction from the UI if you try to attach to a process).
+
+For the `launch` mode, the provided program is interpreted as the path used by Metals' autodiscovery, with default runType, as described in the [Launching](#launching) section. If you provide a relative path to the program, it will be added to the working directory to get the absolute path. If a full path is provided, the working directory is ignored. You may set environment variables and provide parameters to the launched program, as the prompt in the launch UI suggests.
+
+Please note that you need to select `Metals` in the pull-down with available debuggers.
+
+### Limitations and known problems
+
+Server properties for Metals must not be configured in Zed settings. Configuring server properties in the settings (like the example below) causes Zed to [use them directly instead of those provided by the extension](https://github.com/zed-industries/zed/issues/45209), which currently causes the LSP to start **without DAP support**. If you try to start a debug session, you will receive the error: `DAP cannot start if any binary arguments for Metals are set in config file`.
+```json
+{
+  "lsp": {
+    "metals": {
+      "binary": {
+        "arguments": [
+          "-Dmetals.http=on"
+        ]
+      }
+    }
+  }
+}
+```
+Note: the `-Dmetals.http=on` property is added by the extension automatically, so it does not need to be included manually.
+
+For the debug session to start, make sure the Metals LSP server is up and running. If not, you can get one of the following errors:
+- `The Metals LSP server hasn't been started yet for the current workspace ...`
+- `-32602 Could not find '' build target `
+- `-32600 No build target could be found for the path: ...`
+
+While trying to set a breakpoint in a test method, Zed (as of v0.216.1) throws an error: ``invalid value: integer `-1`, expected u64``.
+
 ## Releasing the extension
 To release the extension, you need to bump the version in `Cargo.toml` and `extension.toml` in the root of the repository and create a tag for the version (example bump: [e8b826cb3fc0f5f054aa0012e17824f8904a73f5](https://github.com/scalameta/metals-zed/commit/e8b826cb3fc0f5f054aa0012e17824f8904a73f5).
 
