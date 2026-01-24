@@ -115,7 +115,7 @@
 ; Weaver Test - https://disneystreaming.github.io/weaver-test/
 (
     (
-        (class_definition
+        (object_definition
             extend: (extends_clause
                 type: (type_identifier) @run
             )
