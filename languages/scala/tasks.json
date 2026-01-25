@@ -1,0 +1,29 @@
+[
+  {
+    "label": "sbt clean",
+    "command": "sbt --client clean",
+    "reveal": "no_focus"
+  },
+  {
+    "label": "sbt compile",
+    "command": "sbt --client compile",
+    "reveal": "no_focus"
+  },
+  {
+    "label": "sbt test",
+    "command": "sbt --client test",
+    "reveal": "no_focus"
+  },
+  {
+    "label": "sbt testOnly *$ZED_STEM",
+    "command": "sbt --client 'testOnly *$ZED_STEM'",
+    "reveal": "no_focus",
+    "tags": ["scala-test"]
+  },
+  {
+    "label": "sbt run",
+    "command": "sbt --client run",
+    "reveal": "no_focus",
+    "tags": ["scala-main"]
+  }
+]

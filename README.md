@@ -187,7 +187,7 @@ Following are example tasks that you can add to your editor, to know more about 
   "label": "Run current test suite with bloop",
   "command": "bloop test $(basename $ZED_WORKTREE_ROOT) -o \"*$ZED_STEM*\"",
   "reveal": "no_focus",
-  "tags": ["scala-test"],
+  "tags": ["scala-test"]
 }
 ```
 
