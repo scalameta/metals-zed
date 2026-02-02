@@ -17,7 +17,7 @@ use crate::dap::{Debugger, ScalaDebugTaskDefinition};
 
 mod dap;
 
-const LSP_DAP_NAME: &str = "Metals";
+const LSP_DAP_NAME: &str = "metals"; // has to be lower-case as is the Metals binary name
 // Proxy is required to send request to LSP and to be able to start the DAP server
 // Zed doesn't support sesnding requests to LSP from extensions
 const PROXY_CODE: &str = include_str!("proxy.mjs");
@@ -44,7 +44,7 @@ impl zed::Extension for ScalaExtension {
             .which(LSP_DAP_NAME)
             .ok_or_else(|| "Metals must be installed manually. Recommended way is to install coursier (https://get-coursier.io/), and then run `cs install metals`.".to_string())?;
 
-        let bin_args_opt = LspSettings::for_worktree("metals", worktree)
+        let bin_args_opt = LspSettings::for_worktree(LSP_DAP_NAME, worktree)
             .map(|lsp_settings| lsp_settings.binary.and_then(|binary| binary.arguments))
             .unwrap_or_default();
 
@@ -108,7 +108,7 @@ impl zed::Extension for ScalaExtension {
         _language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> zed::Result<Option<serde_json::Value>> {
-        let initialization_options = LspSettings::for_worktree("metals", worktree)
+        let initialization_options = LspSettings::for_worktree(LSP_DAP_NAME, worktree)
             .map(|lsp_settings| lsp_settings.initialization_options.clone());
 
         initialization_options
@@ -119,13 +119,13 @@ impl zed::Extension for ScalaExtension {
         _language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> zed::Result<Option<serde_json::Value>> {
-        let settings = LspSettings::for_worktree("metals", worktree)
+        let settings = LspSettings::for_worktree(LSP_DAP_NAME, worktree)
             .ok()
             .and_then(|lsp_settings| lsp_settings.settings.clone())
             .unwrap_or_default();
 
         Ok(Some(serde_json::json!({
-            "metals": settings
+            LSP_DAP_NAME: settings
         })))
     }
 
@@ -194,13 +194,13 @@ impl zed::Extension for ScalaExtension {
         _user_provided_debug_adapter_path: Option<String>,
         worktree: &zed::Worktree,
     ) -> zed::Result<zed::DebugAdapterBinary> {
-        if adapter_name != LSP_DAP_NAME {
+        if !adapter_name.eq_ignore_ascii_case(LSP_DAP_NAME) {
             return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
         }
 
         // Due to https://github.com/zed-industries/zed/issues/45209 Zed ignores returned arguments
         // if any are provided in the config file, rendering proxy start and thus DAP support impossible
-        LspSettings::for_worktree("metals", worktree)
+        LspSettings::for_worktree(LSP_DAP_NAME, worktree)
             .map(|lsp_settings| lsp_settings.binary.and_then(|binary| binary.arguments))
             .unwrap_or_default()
             .map_or(Ok(()), |_| {
@@ -265,7 +265,7 @@ impl zed::Extension for ScalaExtension {
         adapter_name: String,
         config: Value,
     ) -> zed::Result<zed::StartDebuggingRequestArgumentsRequest> {
-        if adapter_name != LSP_DAP_NAME {
+        if !adapter_name.eq_ignore_ascii_case(LSP_DAP_NAME) {
             return Err(format!("Cannot get binary for adapter \"{adapter_name}\""));
         }
 
@@ -285,7 +285,7 @@ impl zed::Extension for ScalaExtension {
         &mut self,
         generic_config: zed::DebugConfig,
     ) -> zed::Result<zed::DebugScenario> {
-        if generic_config.adapter != LSP_DAP_NAME {
+        if !generic_config.adapter.eq_ignore_ascii_case(LSP_DAP_NAME) {
             return Err(format!(
                 "Cannot create configuration for adapter \"{}\"",
                 generic_config.adapter
