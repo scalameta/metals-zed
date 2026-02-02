@@ -56,3 +56,16 @@ jobs:
           else
             echo "Success: Tag version matches the version in extension.toml."
           fi
+
+  update-extension-version:
+    name: Update Extension Version
+    needs: check-version-match
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: huacnlee/zed-extension-action@v2
+        with:
+          extension-name: scala
+          push-to: scalameta/zed-extensions
+        env:
+          COMMITTER_TOKEN: ${{ secrets.SCALAMETA_BOT_GH_TOKEN }}
