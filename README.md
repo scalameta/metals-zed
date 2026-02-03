@@ -196,7 +196,20 @@ Following are example tasks that you can add to your editor, to know more about 
 <details>
 <summary>Using sbt</summary>
 
-Tasks `test` and `testOnly` work out of the box. To run a selected test, use:
+Tasks `test` and `testOnly` work out of the box. Since spinning up a new sbt instance every time is expensive, they run in client mode (`--client`).
+
+If you prefer running a test in a new sbt instance instead, use:
+
+```json
+{
+  "label": "Run current test suite with sbt",
+  "command": "sbt 'testOnly *$ZED_STEM'",
+  "reveal": "no_focus",
+  "tags": ["scala-test"]
+}
+```
+
+To run a selected test, use:
 
 ```json
 {
