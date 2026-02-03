@@ -81,7 +81,7 @@
                 type: (type_identifier) @run
             )
         ) @_scala_test_class_end
-        (#match? @run "^(AnyWordSpec|WordSpec|AnyFunSpec|FunSpec|AnyFunSuite|FunSuite|AnyFlatSpec|FlatSpec|FeatureSpec|AnyFeatureSpec|AnyPropSpec|PropSpec|AnyFreeSpec|FreeSpec)$")
+        (#match? @run "^(AnyWordSpec|AnyWordSpecLike|WordSpec|AnyFunSpec|AnyFunSpecLike|FunSpec|AnyFunSuite|AnyFunSuiteLike|FunSuite|AnyFlatSpec|AnyFlatSpecLike|FlatSpec|FeatureSpec|AnyFeatureSpec|AnyFeatureSpecLike|AnyPropSpec|AnyPropSpecLike|PropSpec|AnyFreeSpec|AnyFreeSpecLike|FreeSpec)$")
     )
     (#set! tag scala-test)
 )

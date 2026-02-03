@@ -110,13 +110,13 @@ The extension supports detecting tests by checking if the test class inherits fr
 <details>
 <summary>ScalaTest</summary>
 
-- AnyWordSpec / WordSpec
-- AnyFunSpec / FunSpec
-- AnyFunSuite / FunSuite
-- AnyFlatSpec / FlatSpec
-- AnyFeatureSpec / FeatureSpec
-- AnyPropSpec / PropSpec
-- AnyFreeSpec / FreeSpec
+- AnyWordSpec / AnyWordSpecLike / WordSpec
+- AnyFunSpec / AnyFunSpecLike / FunSpec
+- AnyFunSuite / AnyFunSuiteLike / FunSuite
+- AnyFlatSpec / AnyFlatSpecLike / FlatSpec
+- AnyFeatureSpec / AnyFeatureSpecLike / FeatureSpec
+- AnyPropSpec / AnyPropSpecLike / PropSpec
+- AnyFreeSpec / AnyFreeSpecLike / FreeSpec
 
 </details>
 
@@ -196,34 +196,12 @@ Following are example tasks that you can add to your editor, to know more about 
 <details>
 <summary>Using sbt</summary>
 
-```json
-{
-  "label": "Run current test suite with sbt",
-  "command": "sbt 'testOnly *$ZED_STEM'",
-  "reveal": "no_focus",
-  "tags": ["scala-test"]
-}
-```
-
-or even a selected test case:
+Tasks `test` and `testOnly` work out of the box. To run a selected test, use:
 
 ```json
 {
   "label": "Run selected test with sbt",
   "command": "sbt 'testOnly -- -z \"$ZED_SELECTED_TEXT\"'",
-  "reveal": "no_focus",
-  "tags": ["scala-test"]
-}
-```
-
-In the examples above, all tests with names containing the selected test will be run.
-
-Spinning up a new sbt instance every time is expensive. If you have a separate sbt session opened, `--client` mode can be used:
-
-```json
-{
-  "label": "Run current test suite with sbt in client mode",
-  "command": "sbt --client 'testOnly *$ZED_STEM'",
   "reveal": "no_focus",
   "tags": ["scala-test"]
 }
@@ -257,6 +235,20 @@ or even a selected test case:
 ```
 
 In the examples above, all tests with names containing the selected test will be run.
+
+</details>
+
+<details>
+<summary>Using Mill</summary>
+
+```json
+{
+  "label": "Run current test suite with Mill",
+  "command": "./mill test",
+  "reveal": "no_focus",
+  "tags": ["scala-test"]
+}
+```
 
 </details>
 
