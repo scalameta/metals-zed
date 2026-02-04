@@ -21,3 +21,6 @@ grammars
 # Direnv files
 .direnv/
 .envrc
+
+# IntelliJ
+.idea
