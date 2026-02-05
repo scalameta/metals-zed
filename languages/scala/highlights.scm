@@ -146,10 +146,10 @@
 
 ;; keywords
 
-(opaque_modifier) @type.qualifier
-(infix_modifier) @keyword
-(transparent_modifier) @type.qualifier
-(open_modifier) @type.qualifier
+(opaque_modifier) @keyword.modifier
+(infix_modifier) @keyword.modifier
+(transparent_modifier) @keyword.modifier
+(open_modifier) @keyword.modifier
 
 [
   "case"
@@ -194,7 +194,7 @@
   "sealed"
   "private"
   "protected"
-] @type.qualifier
+] @keyword.modifier
 
 (inline_modifier) @label
 
