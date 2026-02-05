@@ -547,7 +547,4 @@ While trying to set a breakpoint in a test method, Zed (as of v0.216.1) throws a
 
 To release the extension, you need to bump the version in `Cargo.toml` and `extension.toml` in the root of the repository and create a tag for the version (example bump: [e8b826cb3fc0f5f054aa0012e17824f8904a73f5](https://github.com/scalameta/metals-zed/commit/e8b826cb3fc0f5f054aa0012e17824f8904a73f5)).
 
-After that, you need to open a PR on [zed-industries/extensions](https://github.com/zed-industries/extensions) (example: [zed-industries/extensions#29](https://github.com/zed-industries/extensions/pull/1609/files)). The PR must:
-
-- Update the submodule on extensions/scala to the appropriate commit
-- Update the file `extensions.toml` to set the appropriate version for the extension in the `[scala]` section
+Once the tag is created, an automated job will handle the update and automatically open the PR on [zed-industries/extensions](https://github.com/zed-industries/extensions).
