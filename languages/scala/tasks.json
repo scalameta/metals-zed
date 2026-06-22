@@ -25,5 +25,65 @@
     "command": "sbt --client run",
     "reveal": "no_focus",
     "tags": ["scala-main"]
+  },
+  {
+    "label": "Metals: Import build",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" build-import",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Restart build server",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" build-restart",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Connect to build server",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" build-connect",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Disconnect from build server",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" build-disconnect",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Switch build server",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" bsp-switch",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Cascade compile",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" compile-cascade",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Cancel compilation",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" compile-cancel",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Clean compile",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" compile-clean",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Clean and restart build server",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" reset-workspace",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Reset notifications",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" reset-notifications",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Generate BSP config",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" generate-bsp-config",
+    "reveal": "always"
+  },
+  {
+    "label": "Metals: Run doctor",
+    "command": "node \"$HOME/.metals-zed/cmd.mjs\" doctor-run",
+    "reveal": "always"
   }
 ]

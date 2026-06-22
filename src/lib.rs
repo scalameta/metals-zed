@@ -88,10 +88,17 @@ impl zed::Extension for ScalaExtension {
                 .map_err(|e| format!("Could not mark current workspace as initialized: {e}"))?;
             workspaces.insert(workspace);
 
+            // Embed the task helper so the proxy can write it to `~/.metals-zed/cmd.mjs`.
+            let mut env = worktree.shell_env();
+            env.push((
+                "METALS_ZED_HELPER_CODE".to_string(),
+                include_str!("metals-cmd.mjs").to_string(),
+            ));
+
             Ok(zed::Command {
                 command: zed::node_binary_path()?, // Node is used to start the proxy
                 args,
-                env: worktree.shell_env(),
+                env,
             })
         } else {
             // Start Metals directly, without DAP support
