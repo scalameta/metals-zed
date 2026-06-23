@@ -103,6 +103,43 @@ Both sections need to be set, since Zed doesn't turn on inlay hints by default a
 
 </details>
 
+## Metals build commands
+
+Metals exposes a number of build/project actions that VS Code surfaces in its sidebar (Import build, Run doctor, etc.). Zed's extension API does not let an extension contribute its own command palette entries or sidebar, but these commands are available as **tasks**.
+
+Open the task picker (`task: spawn`, default `cmd-shift-r` on macOS / `ctrl-shift-r` on Linux), type `Metals` to filter, and pick the command you want.
+
+The following tasks are bundled:
+
+- `Metals: Import build`
+- `Metals: Restart build server`
+- `Metals: Connect to build server`
+- `Metals: Disconnect from build server`
+- `Metals: Switch build server`
+- `Metals: Cascade compile`
+- `Metals: Cancel compilation`
+- `Metals: Clean compile`
+- `Metals: Clean and restart build server`
+- `Metals: Reset notifications`
+- `Metals: Generate BSP config`
+- `Metals: Run doctor`
+
+You can bind a hotkey to a specific task in your `keymap.json`, for example:
+
+```json
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-shift-i": ["task::Spawn", { "task_name": "Metals: Import build" }]
+    }
+  }
+]
+```
+
+> [!NOTE]
+> These tasks rely on the same proxy that powers DAP, so they require Metals to be running for the workspace (open a Scala file first) and they do not work when `lsp.metals.binary.arguments` is set in your Zed settings - that disables the proxy. See [Limitations and known problems](#limitations-and-known-problems).
+
 ## Running Tests
 
 The extension supports detecting tests by checking if the test class inherits from specific traits

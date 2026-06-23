@@ -22,7 +22,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Transform } from "node:stream";
 import { text } from "node:stream/consumers";
@@ -40,6 +40,12 @@ const args = process.argv.slice(3);
 
 const PROXY_ID = Buffer.from(process.cwd().replace(/\/+$/, "")).toString("hex");
 const PROXY_HTTP_PORT_FILE = join(workdir, "proxy", PROXY_ID);
+// Tasks defined in `languages/scala/tasks.json` invoke a helper from a stable
+// path (Zed's task variables can't resolve the extension dir). The helper code
+// is passed in via env var by the Rust side.
+const HELPER_DIR = join(homedir(), ".metals-zed");
+const HELPER_FILE = join(HELPER_DIR, "cmd.mjs");
+const HELPER_PORT_FILE = join(HELPER_DIR, `${PROXY_ID}.port`);
 const command = process.platform === "win32" ? `"${bin}"` : bin;
 
 const lsp = spawn(command, args, { shell: process.platform === "win32" });
@@ -69,15 +75,43 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // Fire-and-forget mode is used by the Metals task helper. It sidesteps
+  // cosmetic post-command exceptions Metals emits when refreshing client
+  // capabilities Zed doesn't implement. DAP omits this flag and gets Metals'
+  // full JSON-RPC response below.
+  if (data.fireAndForget === true) {
+    proxy.send(data.method, data.params);
+    res.statusCode = 202;
+    res.end(JSON.stringify({ accepted: true }));
+    return;
+  }
+
   const result = await proxy.request(data.method, data.params);
   res.statusCode = 200;
   res.setHeader("Content-Type", "application/json");
   res.write(JSON.stringify(result));
   res.end();
-}).listen(HTTP_PORT, () => {
+}).listen(HTTP_PORT, "127.0.0.1", () => {
+  const portStr = server.address().port.toString();
   mkdirSync(dirname(PROXY_HTTP_PORT_FILE), { recursive: true });
-  writeFileSync(PROXY_HTTP_PORT_FILE, server.address().port.toString());
+  writeFileSync(PROXY_HTTP_PORT_FILE, portStr);
+
+  // Mirror the port file to a workspace-independent location so tasks can find it,
+  // and install the helper script there if Rust passed it in.
+  try {
+    mkdirSync(HELPER_DIR, { recursive: true });
+    writeFileSync(HELPER_PORT_FILE, portStr);
+    const helperCode = process.env.METALS_ZED_HELPER_CODE;
+    if (helperCode) {
+      writeFileSync(HELPER_FILE, helperCode);
+    }
+  } catch (err) {
+    process.stderr.write(`Failed to install Metals task helper: ${err}\n`);
+  }
 });
+
+// If Metals dies, drop with it so Zed respawns the whole pair cleanly.
+lsp.on("exit", () => process.exit(0));
 
 export function createLspProxy({
   server: { stdin: serverStdin, stdout: serverStdout, stderr: serverStderr },
@@ -144,6 +178,20 @@ export function createLspProxy({
 
         serverStdin.write(stringify({ jsonrpc: "2.0", id, method, params }));
       });
+    },
+
+    /**
+     * Send a request without waiting for the response. The eventual reply
+     * still arrives on stdout - register a no-op handler so the queue swallows
+     * it instead of forwarding to Zed (which never asked for it).
+     *
+     * @param {string} method
+     * @param {any} params
+     */
+    send(method, params) {
+      const id = nextid();
+      queue.set(id, () => {});
+      serverStdin.write(stringify({ jsonrpc: "2.0", id, method, params }));
     },
 
     cancel(id) {
