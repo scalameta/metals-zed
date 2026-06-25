@@ -18,6 +18,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -38,7 +39,9 @@ const workdir = process.argv[1];
 const bin = process.argv[2];
 const args = process.argv.slice(3);
 
-const PROXY_ID = Buffer.from(process.cwd().replace(/\/+$/, "")).toString("hex");
+// Canonicalize the cwd before hashing - the helper does the same on its side,
+// so the two agree even when the workspace is opened via a symlink.
+const PROXY_ID = Buffer.from(realpathSync(process.cwd())).toString("hex");
 const PROXY_HTTP_PORT_FILE = join(workdir, "proxy", PROXY_ID);
 // Tasks defined in `languages/scala/tasks.json` invoke a helper from a stable
 // path (Zed's task variables can't resolve the extension dir). The helper code

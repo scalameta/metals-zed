@@ -8,7 +8,7 @@
 // the same way they do when Metals triggers a command on its own.
 
 import { Buffer } from "node:buffer";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { request } from "node:http";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -19,7 +19,12 @@ if (!cmd) {
   process.exit(1);
 }
 
-const workspace = process.cwd().replace(/\/+$/, "");
+// Use ZED_WORKTREE_ROOT (set by Zed for tasks) rather than process.cwd():
+// interactive shells in user .zshrc/.bashrc may `cd` before node runs.
+// `realpathSync` canonicalizes - resolves symlinks and trailing slashes - so
+// the hex matches whatever the proxy wrote, regardless of how the user opened
+// the workspace.
+const workspace = realpathSync(process.env.ZED_WORKTREE_ROOT ?? process.cwd());
 const portFile = join(
   homedir(),
   ".metals-zed",
