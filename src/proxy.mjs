@@ -113,6 +113,15 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// Remove the helper port file on graceful shutdown so the next proxy startup
+// doesn't have to overwrite it - and so a helper invocation after shutdown
+// fails fast with "no proxy" instead of "connection refused on a stale port".
+process.on("exit", () => {
+  try {
+    unlinkSync(HELPER_PORT_FILE);
+  } catch {}
+});
+
 // If Metals dies, drop with it so Zed respawns the whole pair cleanly.
 lsp.on("exit", () => process.exit(0));
 

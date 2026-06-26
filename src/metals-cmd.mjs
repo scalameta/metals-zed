@@ -75,9 +75,18 @@ const req = request(
   },
 );
 req.on("error", (e) => {
-  console.error(
-    `Failed to reach the Metals proxy on port ${port}: ${e.code ?? ""} ${e.message}`,
-  );
+  if (e.code === "ECONNREFUSED") {
+    console.error(
+      `The Metals proxy isn't running on port ${port}.\n` +
+        `It may have stopped after Zed last restarted Metals. To recover:\n` +
+        `  - cmd-shift-p -> "zed: restart language server"\n` +
+        `  - or close and reopen a Scala file in this workspace`,
+    );
+  } else {
+    console.error(
+      `Failed to reach the Metals proxy on port ${port}: ${e.code ?? ""} ${e.message}`,
+    );
+  }
   process.exit(1);
 });
 req.end(body);
