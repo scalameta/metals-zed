@@ -8,7 +8,7 @@
 // the same way they do when Metals triggers a command on its own.
 
 import { Buffer } from "node:buffer";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { request } from "node:http";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -19,7 +19,12 @@ if (!cmd) {
   process.exit(1);
 }
 
-const workspace = process.cwd().replace(/\/+$/, "");
+// Use ZED_WORKTREE_ROOT (set by Zed for tasks) rather than process.cwd():
+// interactive shells in user .zshrc/.bashrc may `cd` before node runs.
+// `realpathSync` canonicalizes - resolves symlinks and trailing slashes - so
+// the hex matches whatever the proxy wrote, regardless of how the user opened
+// the workspace.
+const workspace = realpathSync(process.env.ZED_WORKTREE_ROOT ?? process.cwd());
 const portFile = join(
   homedir(),
   ".metals-zed",
@@ -70,9 +75,18 @@ const req = request(
   },
 );
 req.on("error", (e) => {
-  console.error(
-    `Failed to reach the Metals proxy on port ${port}: ${e.code ?? ""} ${e.message}`,
-  );
+  if (e.code === "ECONNREFUSED") {
+    console.error(
+      `The Metals proxy isn't running on port ${port}.\n` +
+        `It may have stopped after Zed last restarted Metals. To recover:\n` +
+        `  - cmd-shift-p -> "zed: restart language server"\n` +
+        `  - or close and reopen a Scala file in this workspace`,
+    );
+  } else {
+    console.error(
+      `Failed to reach the Metals proxy on port ${port}: ${e.code ?? ""} ${e.message}`,
+    );
+  }
   process.exit(1);
 });
 req.end(body);

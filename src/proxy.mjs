@@ -18,6 +18,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -38,7 +39,9 @@ const workdir = process.argv[1];
 const bin = process.argv[2];
 const args = process.argv.slice(3);
 
-const PROXY_ID = Buffer.from(process.cwd().replace(/\/+$/, "")).toString("hex");
+// Canonicalize the cwd before hashing - the helper does the same on its side,
+// so the two agree even when the workspace is opened via a symlink.
+const PROXY_ID = Buffer.from(realpathSync(process.cwd())).toString("hex");
 const PROXY_HTTP_PORT_FILE = join(workdir, "proxy", PROXY_ID);
 // Tasks defined in `languages/scala/tasks.json` invoke a helper from a stable
 // path (Zed's task variables can't resolve the extension dir). The helper code
@@ -108,6 +111,15 @@ const server = createServer(async (req, res) => {
   } catch (err) {
     process.stderr.write(`Failed to install Metals task helper: ${err}\n`);
   }
+});
+
+// Remove the helper port file on graceful shutdown so the next proxy startup
+// doesn't have to overwrite it - and so a helper invocation after shutdown
+// fails fast with "no proxy" instead of "connection refused on a stale port".
+process.on("exit", () => {
+  try {
+    unlinkSync(HELPER_PORT_FILE);
+  } catch {}
 });
 
 // If Metals dies, drop with it so Zed respawns the whole pair cleanly.
