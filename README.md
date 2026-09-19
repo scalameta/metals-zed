@@ -103,42 +103,25 @@ Both sections need to be set, since Zed doesn't turn on inlay hints by default a
 
 </details>
 
-## Metals build commands
+## Metals commands
 
-Metals exposes a number of build/project actions that VS Code surfaces in its sidebar (Import build, Run doctor, etc.). Zed's extension API does not let an extension contribute its own command palette entries or sidebar, but these commands are available as **tasks**.
-
-Open the task picker (`task: spawn`, default `cmd-shift-r` on macOS / `ctrl-shift-r` on Linux), type `Metals` to filter, and pick the command you want.
-
-The following tasks are bundled:
-
-- `Metals: Import build`
-- `Metals: Restart build server`
-- `Metals: Connect to build server`
-- `Metals: Disconnect from build server`
-- `Metals: Switch build server`
-- `Metals: Cascade compile`
-- `Metals: Cancel compilation`
-- `Metals: Clean compile`
-- `Metals: Clean and restart build server`
-- `Metals: Reset notifications`
-- `Metals: Generate BSP config`
-- `Metals: Run doctor`
-
-You can bind a hotkey to a specific task in your `keymap.json`, for example:
+Zed 1.21.0 or newer can execute commands advertised by Metals through its native language server command selector. To open the selector without searching for it in the command palette each time, add a binding for `lsp_command_selector::Toggle` to your personal Zed `keymap.json`:
 
 ```json
 [
   {
     "context": "Workspace",
     "bindings": {
-      "cmd-shift-i": ["task::Spawn", { "task_name": "Metals: Import build" }]
+      "secondary-k m": "lsp_command_selector::Toggle"
     }
   }
 ]
 ```
 
+The `secondary` modifier is Command on macOS and Control on Linux and Windows, so the example uses `cmd-k m` on macOS and `ctrl-k m` elsewhere. Open `keymap.json` with `zed: open keymap file`, merge the binding into its top-level array, then use the shortcut while a Scala file is active. Type part of a command name, such as `build-import`, and press Enter to run it.
+
 > [!NOTE]
-> These tasks rely on the same proxy that powers DAP, so they require Metals to be running for the workspace (open a Scala file first) and they do not work when `lsp.metals.binary.arguments` is set in your Zed settings - that disables the proxy. See [Limitations and known problems](#limitations-and-known-problems).
+> Zed extensions cannot install keybindings, so this binding must be added to your personal keymap.
 
 ## Running Tests
 
