@@ -4,6 +4,7 @@ path_suffixes = ["scala", "sbt", "sc", "mill"]
 line_comments = ["// "]
 autoclose_before = ";:.,=}])"
 tab_size = 2
+increase_indent_pattern = '(^\s*(if|while|for|try)\s*(//.*)?$|(^|[^<>=!])=\s*(//.*)?$|(:|then|else|do|yield|match|catch|finally|with|=>|\?=>)\s*(//.*)?$|^\s*extension\b.*\)\s*(//.*)?$)'
 brackets = [
     { start = "{", end = "}", close = true, newline = true },
     { start = "[", end = "]", close = true, newline = true },
