@@ -751,7 +751,7 @@ dependencies = [
 
 [[package]]
 name = "zed_scala"
-version = "0.2.6"
+version = "0.2.5"
 dependencies = [
  "serde",
  "zed_extension_api",
