@@ -127,6 +127,10 @@
 
 (infix_expression operator: (identifier) @operator)
 (infix_expression operator: (operator_identifier) @operator)
+; An operator taking a colon argument parses as a postfix expression call.
+(call_expression
+  function: (postfix_expression (identifier) @operator .)
+  arguments: (colon_argument))
 (infix_type operator: (operator_identifier) @operator)
 (infix_type operator: (operator_identifier) @operator)
 
@@ -150,6 +154,11 @@
 (infix_modifier) @keyword.modifier
 (transparent_modifier) @keyword.modifier
 (open_modifier) @keyword.modifier
+(erased_modifier) @keyword.modifier
+(into_modifier) @keyword.modifier
+(tracked_modifier) @keyword.modifier
+(update_modifier) @keyword.modifier
+(consume_modifier) @keyword.modifier
 
 [
   "case"
@@ -158,7 +167,7 @@
   "extends"
   "derives"
   "finally"
-;; `forSome` existential types not implemented yet
+  "forSome"
 ;; `macro` not implemented yet
   "object"
   "override"
@@ -170,7 +179,6 @@
   "with"
   "given"
   "using"
-  "end"
   "implicit"
   "extension"
   "with"
@@ -186,6 +194,9 @@
   "catch"
   "throw"
 ] @keyword
+
+; `end` is scanner-lexed, so the marker node is the only thing to match.
+(end_marker) @keyword
 
 [
   "abstract"
