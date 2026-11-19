@@ -442,7 +442,7 @@ A full version of the debug launch configuration, which uses autodiscovery, may 
 
 ### Debugging the test at the cursor
 
-With `"runType": "runClosest"` Metals picks the main method, test suite or individual test case closest to the cursor, so only that test is debugged instead of the whole file or class. Pass the cursor position with Zed's `$ZED_ROW` (required) and `$ZED_COLUMN` (optional) variables:
+With `"runType": "runClosest"` Metals debugs only the main method, test suite or test case closest to the cursor. Pass the cursor position with `$ZED_ROW` (required) and `$ZED_COLUMN` (optional):
 
 ```json
 {
@@ -456,11 +456,9 @@ With `"runType": "runClosest"` Metals picks the main method, test suite or indiv
 }
 ```
 
-Select it in the `Run/Start Debugger` menu with the cursor placed in the test. The test is chosen by Metals as the one whose start line is closest to the cursor, so keep the cursor inside the test you want to debug. There is no gutter button for this yet.
+Place the cursor inside the test and start the configuration from the `Run/Start Debugger` menu. Instead of `row` and `column` (1-based) you can pass a 0-based `"position": { "line": 9, "character": 4 }`.
 
-Individual test cases are discovered by Metals for JUnit, MUnit and ScalaTest; for other frameworks the whole suite closest to the cursor is run. `row` and `column` are 1-based, as the Zed variables are. Alternatively, give the 0-based LSP-style `"position": { "line": 9, "character": 4 }` instead. This requires a Metals version that supports `runClosest` (1.6.5 or newer).
-
-Metals discovers tests only when the client reports debugging support, which Zed does not do by default. Without it the debugger fails with `There is nothing to run or test in the current file`. Enable it in your Zed `settings.json` (or in `.zed/settings.json` of the project):
+Metals discovers tests only if the client reports debugging support, which Zed does not do. Without it you get `There is nothing to run or test in the current file`, so enable it in the Zed settings:
 
 ```json
 {
@@ -596,7 +594,7 @@ For the debug session to start, make sure the Metals LSP server is up and runnin
 - `-32602 Could not find '' build target `
 - `-32600 No build target could be found for the path: ...`
 
-With Metals older than 1.6.9 (it bundles `scala-debug-adapter` older than 4.2.9), hitting a breakpoint in a test method makes Zed throw an error: ``invalid value: integer `-1`, expected u64``. The breakpoint is hit and the right test runs, but Zed cannot show the stack or variables. The debug adapter reports synthetic frames (for example the lambdas that test frameworks such as MUnit use) with `"line": -1`, and Zed expects an unsigned number there. Update Metals to 1.6.9 or newer to fix it. Debugging a `main` method is not affected.
+With Metals older than 1.6.9, stopping at a breakpoint in a test fails with ``invalid value: integer `-1`, expected u64``, and Zed shows no stack or variables. The bundled debug adapter reports lambda frames with `"line": -1`. Update Metals to 1.6.9 or newer. Debugging a `main` method is not affected.
 
 ## Releasing the extension
 
