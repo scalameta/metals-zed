@@ -412,7 +412,8 @@ Metals support the following `runType`s:
 - `"run"` - run the main method in the build target the indicated file belongs to,
 - `"runOrTestFile"` - run the main or test class in the indicated file - this is the default if `runTime` is omitted in the configuration,
 - `"testFile"` - run test class in the indicated file,
-- `"testTarget"` - run all test classes in the build target the indicated file belongs to.
+- `"testTarget"` - run all test classes in the build target the indicated file belongs to,
+- `"runClosest"` - run the main method, test suite or single test case closest to the cursor, see [Debugging the test at the cursor](#debugging-the-test-at-the-cursor).
 
 You may provide additional parameters to the configuration:
 
@@ -436,6 +437,40 @@ A full version of the debug launch configuration, which uses autodiscovery, may 
   "jvmOptions": ["-Xms1G", "-Xmx4G", "-Dproperty=123"],
   "env": { "API_KEY": "a0b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9" },
   "envFile": ".env"
+}
+```
+
+### Debugging the test at the cursor
+
+With `"runType": "runClosest"` Metals picks the main method, test suite or individual test case closest to the cursor, so only that test is debugged instead of the whole file or class. Pass the cursor position with Zed's `$ZED_ROW` (required) and `$ZED_COLUMN` (optional) variables:
+
+```json
+{
+  "label": "Debug nearest test (Metals)",
+  "adapter": "Metals",
+  "request": "launch",
+  "path": "$ZED_FILE",
+  "runType": "runClosest",
+  "row": "$ZED_ROW",
+  "column": "$ZED_COLUMN"
+}
+```
+
+Select it in the `Run/Start Debugger` menu with the cursor placed in the test. The test is chosen by Metals as the one whose start line is closest to the cursor, so keep the cursor inside the test you want to debug. There is no gutter button for this yet.
+
+Individual test cases are discovered by Metals for JUnit, MUnit and ScalaTest; for other frameworks the whole suite closest to the cursor is run. `row` and `column` are 1-based, as the Zed variables are. Alternatively, give the 0-based LSP-style `"position": { "line": 9, "character": 4 }` instead. This requires a Metals version that supports `runClosest` (1.6.5 or newer).
+
+Metals discovers tests only when the client reports debugging support, which Zed does not do by default. Without it the debugger fails with `There is nothing to run or test in the current file`. Enable it in your Zed `settings.json` (or in `.zed/settings.json` of the project):
+
+```json
+{
+  "lsp": {
+    "metals": {
+      "initialization_options": {
+        "debuggingProvider": true
+      }
+    }
+  }
 }
 ```
   
@@ -562,6 +597,8 @@ For the debug session to start, make sure the Metals LSP server is up and runnin
 - `-32600 No build target could be found for the path: ...`
 
 While trying to set a breakpoint in a test method, Zed (as of v0.216.1) throws an error: ``invalid value: integer `-1`, expected u64``.
+
+The breakpoint is hit and the right test runs, but Zed cannot show the stack or variables. The cause is that the debug adapter reports synthetic frames (for example lambdas, which test frameworks such as MUnit use) with `"line": -1`, and Zed expects an unsigned number there. Debugging a `main` method is not affected.
 
 ## Releasing the extension
 

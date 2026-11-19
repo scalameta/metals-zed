@@ -64,10 +64,41 @@
                     "run",
                     "runOrTestFile",
                     "testFile",
-                    "testTarget"
+                    "testTarget",
+                    "runClosest"
                   ],
                   "default": "run",
-                  "description": "The run type for Metals discovery"
+                  "description": "The run type for Metals discovery. \"runClosest\" runs the main method, test suite or single test case closest to the cursor and requires \"row\" (or \"position\")"
+                },
+                "row": {
+                  "type": [
+                    "string",
+                    "integer"
+                  ],
+                  "description": "1-based cursor line used by runType \"runClosest\"; use $ZED_ROW"
+                },
+                "column": {
+                  "type": [
+                    "string",
+                    "integer"
+                  ],
+                  "description": "Optional 1-based cursor column used by runType \"runClosest\"; use $ZED_COLUMN"
+                },
+                "position": {
+                  "type": "object",
+                  "description": "0-based cursor position (as in LSP) used by runType \"runClosest\"; ignored if \"row\" is set",
+                  "properties": {
+                    "line": {
+                      "type": "integer"
+                    },
+                    "character": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "line",
+                    "character"
+                  ]
                 }
               },
               "required": [
