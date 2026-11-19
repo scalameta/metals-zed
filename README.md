@@ -412,7 +412,8 @@ Metals support the following `runType`s:
 - `"run"` - run the main method in the build target the indicated file belongs to,
 - `"runOrTestFile"` - run the main or test class in the indicated file - this is the default if `runTime` is omitted in the configuration,
 - `"testFile"` - run test class in the indicated file,
-- `"testTarget"` - run all test classes in the build target the indicated file belongs to.
+- `"testTarget"` - run all test classes in the build target the indicated file belongs to,
+- `"runClosest"` - run the main method, test suite or single test case closest to the cursor, see [Debugging the test at the cursor](#debugging-the-test-at-the-cursor).
 
 You may provide additional parameters to the configuration:
 
@@ -436,6 +437,38 @@ A full version of the debug launch configuration, which uses autodiscovery, may 
   "jvmOptions": ["-Xms1G", "-Xmx4G", "-Dproperty=123"],
   "env": { "API_KEY": "a0b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9" },
   "envFile": ".env"
+}
+```
+
+### Debugging the test at the cursor
+
+With `"runType": "runClosest"` Metals debugs only the main method, test suite or test case closest to the cursor. Pass the cursor position with `$ZED_ROW` (required) and `$ZED_COLUMN` (optional):
+
+```json
+{
+  "label": "Debug nearest test (Metals)",
+  "adapter": "Metals",
+  "request": "launch",
+  "path": "$ZED_FILE",
+  "runType": "runClosest",
+  "row": "$ZED_ROW",
+  "column": "$ZED_COLUMN"
+}
+```
+
+Place the cursor inside the test and start the configuration from the `Run/Start Debugger` menu. Instead of `row` and `column` (1-based) you can pass a 0-based `"position": { "line": 9, "character": 4 }`.
+
+Metals discovers tests only if the client reports debugging support, which Zed does not do. Without it you get `There is nothing to run or test in the current file`, so enable it in the Zed settings:
+
+```json
+{
+  "lsp": {
+    "metals": {
+      "initialization_options": {
+        "debuggingProvider": true
+      }
+    }
+  }
 }
 ```
   
@@ -561,7 +594,7 @@ For the debug session to start, make sure the Metals LSP server is up and runnin
 - `-32602 Could not find '' build target `
 - `-32600 No build target could be found for the path: ...`
 
-While trying to set a breakpoint in a test method, Zed (as of v0.216.1) throws an error: ``invalid value: integer `-1`, expected u64``.
+With Metals older than 1.6.9, stopping at a breakpoint in a test fails with ``invalid value: integer `-1`, expected u64``, and Zed shows no stack or variables. The bundled debug adapter reports lambda frames with `"line": -1`. Update Metals to 1.6.9 or newer. Debugging a `main` method is not affected.
 
 ## Releasing the extension
 
