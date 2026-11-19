@@ -596,9 +596,7 @@ For the debug session to start, make sure the Metals LSP server is up and runnin
 - `-32602 Could not find '' build target `
 - `-32600 No build target could be found for the path: ...`
 
-While trying to set a breakpoint in a test method, Zed (as of v0.216.1) throws an error: ``invalid value: integer `-1`, expected u64``.
-
-The breakpoint is hit and the right test runs, but Zed cannot show the stack or variables. The cause is that the debug adapter reports synthetic frames (for example lambdas, which test frameworks such as MUnit use) with `"line": -1`, and Zed expects an unsigned number there. Debugging a `main` method is not affected.
+With Metals older than 1.6.9 (it bundles `scala-debug-adapter` older than 4.2.9), hitting a breakpoint in a test method makes Zed throw an error: ``invalid value: integer `-1`, expected u64``. The breakpoint is hit and the right test runs, but Zed cannot show the stack or variables. The debug adapter reports synthetic frames (for example the lambdas that test frameworks such as MUnit use) with `"line": -1`, and Zed expects an unsigned number there. Update Metals to 1.6.9 or newer to fix it. Debugging a `main` method is not affected.
 
 ## Releasing the extension
 
