@@ -20,6 +20,7 @@ const LSP_REQUEST: &str = "workspace/executeCommand"; // LSP request to send a c
 const DAP_START_COMMAND: &str = "debug-adapter-start"; // The command send to LSP to initialize debugger
 const PROXY_FOLDER: &str = "proxy"; // The folder (inside Zed's `extentions/work/scala` folder) to put port info to
 const DEFAULT_LAUNCH_RUN_TYPE: &str = "runOrTestFile"; // Default runType for autodiscovery debugee launch mode
+const RUN_CLOSEST: &str = "runClosest"; // runType selecting the main/test closest to the cursor (requires position)
 const DEFAULT_ATTACH_HOST_NAME: &str = "localhost"; // Default hostName for debugee attach mode
 const DEFAULT_ATTACH_PORT: u16 = 5005; // Default port number for debugee attach mode
 
@@ -40,8 +41,8 @@ pub struct ScalaDebugLauchDefinition {
     #[serde(flatten)]
     entry: EntryPoint,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "buildTaget")]
-    build_taget: Option<String>,
+    #[serde(rename = "buildTarget")]
+    build_target: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     args: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -59,8 +60,8 @@ pub struct ScalaDebugLauchDefinition {
 pub struct ScalaDebugAttachDefinition {
     request: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "buildTaget")]
-    build_taget: Option<String>,
+    #[serde(rename = "buildTarget")]
+    build_target: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hostName")]
     host_name: Option<String>,
@@ -68,9 +69,43 @@ pub struct ScalaDebugAttachDefinition {
     port: Option<u16>,
 }
 
+// Cursor position as expected by Metals (LSP `Position`, both values are 0-based)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct Position {
+    line: u32,
+    character: u32,
+}
+
+// 1-based editor coordinate (like Zed's `$ZED_ROW` and `$ZED_COLUMN`).
+// Zed substitutes task variables into strings, so both numbers and numeric strings are accepted.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+enum Coordinate {
+    Number(u32),
+    Text(String),
+}
+
+impl Coordinate {
+    // Convert 1-based editor coordinate to the 0-based one used by LSP
+    fn to_zero_based(&self, name: &str) -> zed::Result<u32> {
+        let value = match self {
+            Coordinate::Number(n) => *n,
+            Coordinate::Text(s) => s.trim().parse::<u32>().map_err(|e| {
+                format!("Cannot parse `{name}` ({s:?}) as a number, expected e.g. \"$ZED_ROW\": {e}")
+            })?,
+        };
+        value
+            .checked_sub(1)
+            .ok_or_else(|| format!("`{name}` is 1-based, so it must be at least 1"))
+    }
+}
+
 // Debugger needs an entry point to launch a program or test.
 // There are 3 ways to provide it:
-// - Auto: Automatically detect the entry point based on the provided file (path)
+// - Auto: Automatically detect the entry point based on the provided file (path).
+//   With runType "runClosest" the main or test (including a single test case) closest
+//   to the cursor is chosen; the cursor is given either as `position` (0-based, as in LSP)
+//   or as `row` and `column` (1-based, e.g. "$ZED_ROW" and "$ZED_COLUMN")
 // - Main: Specify the main class to run
 // - Test: Specify the test class to run
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -80,6 +115,14 @@ enum EntryPoint {
         path: String,
         #[serde(rename = "runType")]
         run_type: Option<String>,
+        // Sent to Metals; computed from `row` and `column` when they are provided
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        position: Option<Position>,
+        // User-friendly input only, never sent to Metals
+        #[serde(default, skip_serializing)]
+        row: Option<Coordinate>,
+        #[serde(default, skip_serializing)]
+        column: Option<Coordinate>,
     },
     Main {
         #[serde(rename = "mainClass")]
@@ -160,15 +203,44 @@ impl Debugger {
                     // For autodiscovery, prefix path with file scheme and provide default runType if missing
                     // Please note, that we cannot provide "$ZED_FILE" as default for path,
                     // because it's evaluated only before calling extension.
-                    EntryPoint::Auto { path, run_type } => {
+                    EntryPoint::Auto {
+                        path,
+                        run_type,
+                        position,
+                        row,
+                        column,
+                    } => {
                         let path = if path.starts_with("file://") {
                             path
                         } else {
                             format!("file://{}", full_path(&path, workspace))
                         };
                         let run_type = run_type.or(Some(DEFAULT_LAUNCH_RUN_TYPE.to_string()));
+                        // `row` and `column` (1-based) take precedence over `position` (0-based)
+                        let position = match row {
+                            Some(row) => Some(Position {
+                                line: row.to_zero_based("row")?,
+                                character: column
+                                    .map(|column| column.to_zero_based("column"))
+                                    .transpose()?
+                                    .unwrap_or(0),
+                            }),
+                            None => position,
+                        };
+                        if run_type.as_deref() == Some(RUN_CLOSEST) && position.is_none() {
+                            return Err(format!(
+                                "runType \"{RUN_CLOSEST}\" requires the cursor position: \
+                                 set \"row\": \"$ZED_ROW\" (and optionally \"column\": \"$ZED_COLUMN\")"
+                            ));
+                        }
                         let config = ScalaDebugLauchDefinition {
-                            entry: EntryPoint::Auto { path, run_type },
+                            entry: EntryPoint::Auto {
+                                path,
+                                run_type,
+                                position,
+                                row: None,
+                                column: None,
+                            },
                             ..config
                         };
                         Ok(ScalaDebugTaskDefinition::Launch(config))
@@ -210,11 +282,14 @@ impl Debugger {
                         .map(|cwd| full_path(&launch_request.program, &cwd))
                         .unwrap_or(launch_request.program),
                     run_type: None,
+                    position: None,
+                    row: None,
+                    column: None,
                 };
                 let config = ScalaDebugLauchDefinition {
                     request: "launch".to_string(),
                     entry,
-                    build_taget: None,
+                    build_target: None,
                     args: if launch_request.args.is_empty() {
                         None
                     } else {
