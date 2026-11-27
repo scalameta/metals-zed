@@ -458,6 +458,14 @@ With `"runType": "runClosest"` Metals debugs only the main method, test suite or
 
 Place the cursor inside the test and start the configuration from the `Run/Start Debugger` menu. Instead of `row` and `column` (1-based) you can pass a 0-based `"position": { "line": 9, "character": 4 }`.
 
+The Java extension can also pass a `testTarget` object to select a Java test class
+or method from its gutter. Metals must have imported the project, and individual
+method selection depends on the test framework and build server. This object is
+distinct from the `"testTarget"` run type, which selects all tests in a build
+target. Java test targets currently accept `env` and `jvmOptions`, but not
+`envFile`; workspace test JVM options are not added automatically for this
+configuration.
+
 Metals discovers tests only if the client reports debugging support, which Zed does not do. Without it you get `There is nothing to run or test in the current file`, so enable it in the Zed settings:
 
 ```json

@@ -54,6 +54,24 @@
           "oneOf": [
             {
               "properties": {
+                "testTarget": {
+                  "type": "object",
+                  "description": "Discover and debug a Java test class or method in its source file.",
+                  "properties": {
+                    "file": { "type": "string" },
+                    "className": { "type": "string" },
+                    "outerClass": { "type": "string" },
+                    "packageName": { "type": "string" },
+                    "method": { "type": "string" }
+                  },
+                  "required": ["file", "className"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["testTarget"]
+            },
+            {
+              "properties": {
                 "path": {
                   "type": "string",
                   "description": "Absolute path to the file to be debugged, used by Metals discovery; may be $ZED_FILE"

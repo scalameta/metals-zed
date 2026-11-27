@@ -69,7 +69,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const result = await proxy.request(data.method, data.params);
+  const result = await proxy.request(data.method, data.params).catch((error) => error);
   res.statusCode = 200;
   res.setHeader("Content-Type", "application/json");
   res.write(JSON.stringify(result));
@@ -96,7 +96,8 @@ export function createLspProxy({
 
     const pending = queue.get(message?.id);
     if (pending) {
-      pending(message);
+      clearTimeout(pending.timer);
+      pending.resolve(message);
       queue.delete(message.id);
       return;
     }
@@ -126,27 +127,31 @@ export function createLspProxy({
     request(method, params) {
       return new Promise((resolve, reject) => {
         const id = nextid();
-        queue.set(id, resolve);
-
-        setTimeout(() => {
+        const timeout = method === "workspace/executeCommand" &&
+          ["debug-adapter-start", "discover-jvm-run-command"].includes(params?.command)
+          ? 300_000 : TIMEOUT;
+        const timer = setTimeout(() => {
           if (queue.has(id)) {
             reject({
               jsonrpc: "2.0",
               id,
               error: {
                 code: -32803,
-                message: "Request to language server timed out after 5000ms.",
+                message: `Request to language server timed out after ${timeout}ms.`,
               },
             });
             this.cancel(id);
           }
-        }, TIMEOUT);
+        }, timeout);
+        timer.unref();
+        queue.set(id, { resolve, timer });
 
         serverStdin.write(stringify({ jsonrpc: "2.0", id, method, params }));
       });
     },
 
     cancel(id) {
+      clearTimeout(queue.get(id)?.timer);
       queue.delete(id);
 
       serverStdin.write(

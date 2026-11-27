@@ -227,13 +227,17 @@ impl zed::Extension for ScalaExtension {
         // Please note, that "label" and "adapter", required by Zed, are stripped before passing to extension
         let conf = Value::from_str(config.config.as_str())
             .map_err(|e| format!("Invalid JSON configuration: {e}"))?;
-        let scala_conf: ScalaDebugTaskDefinition = serde_json::from_value(conf.clone())
-            .map_err(|e| format!("Cannot parse debug taks definition: {e}"))?;
-
         // Determine debug mode (lauch or attach)
-        let request_kind = self.dap_request_kind(adapter_name, conf)?;
+        let request_kind = self.dap_request_kind(adapter_name, conf.clone())?;
         // Check and enrich debug configuration with default values
-        let arguments = Debugger::enrich_config(&workspace, scala_conf)?;
+        let arguments = if conf.get("testTarget").is_some() {
+            Debugger::test_config(&workspace, &conf)?
+        } else {
+            let scala_conf: ScalaDebugTaskDefinition = serde_json::from_value(conf)
+                .map_err(|e| format!("Cannot parse debug task definition: {e}"))?;
+            serde_json::to_value(Debugger::enrich_config(&workspace, scala_conf)?)
+                .map_err(|e| format!("Cannot serialize debug task definition: {e}"))?
+        };
 
         // Return debug configuration back to Zed
         let arguments_json = serde_json::to_string(&arguments)
