@@ -91,7 +91,9 @@ impl Coordinate {
         let value = match self {
             Coordinate::Number(n) => *n,
             Coordinate::Text(s) => s.trim().parse::<u32>().map_err(|e| {
-                format!("Cannot parse `{name}` ({s:?}) as a number, expected e.g. \"$ZED_ROW\": {e}")
+                format!(
+                    "Cannot parse `{name}` ({s:?}) as a number, expected e.g. \"$ZED_ROW\": {e}"
+                )
             })?,
         };
         value
@@ -165,7 +167,7 @@ impl Debugger {
     // Starts the debugger by sending "debug-adapter-start" request to Metals
     pub fn start(
         workspace: &str,
-        arguments: &ScalaDebugTaskDefinition,
+        arguments: &impl Serialize,
     ) -> zed::Result<zed::TcpArgumentsTemplate> {
         // Send the "debug-adapter-start" request to LSP
         let response = Debugger::lsp_request::<DapStartResult>(
@@ -186,6 +188,24 @@ impl Debugger {
             port: Some(port),
             timeout: None,
         })
+    }
+
+    pub fn test_config(workspace: &str, config: &Value) -> zed::Result<Value> {
+        let target: JavaTestTarget = serde_json::from_value(config["testTarget"].clone())
+            .map_err(|error| format!("Invalid Java test target: {error}"))?;
+        if config["request"] != "launch" {
+            return Err("Java test targets require a launch request".into());
+        }
+        let path = file_uri(&full_path(&target.file, workspace));
+        let discovery: Value = Self::lsp_request(
+            workspace,
+            LSP_REQUEST,
+            json!({
+                "command": "discover-jvm-run-command",
+                "arguments": [{"path": path, "runType": "testFile"}],
+            }),
+        )?;
+        select_java_test(&target, discovery, config)
     }
 
     // Get the arguments for "debug-adapter-start" request.
@@ -359,34 +379,312 @@ impl Debugger {
     }
 }
 
-// Retrieve port number from URI
-fn get_port_from_uri(s: &str) -> zed::Result<u16> {
-    s.rsplit_once(':') // split the string at the last colon
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JavaTestTarget {
+    file: String,
+    class_name: String,
+    #[serde(default)]
+    outer_class: String,
+    package_name: Option<String>,
+    method: Option<String>,
+}
+
+fn select_java_test(
+    target: &JavaTestTarget,
+    discovery: Value,
+    config: &Value,
+) -> zed::Result<Value> {
+    let targets = discovery["targets"]
+        .as_array()
+        .filter(|targets| targets.len() == 1)
+        .ok_or("Metals did not resolve a unique build target for the test file")?;
+    if discovery["dataKind"] != "scala-test-suites" {
+        return Err("Metals did not return test suites for the selected file".into());
+    }
+    let suites = discovery["data"]
+        .as_array()
+        .ok_or("Metals returned invalid test suites")?;
+    let suffix = if target.outer_class.is_empty() {
+        target.class_name.clone()
+    } else {
+        format!("{}.{}", target.outer_class, target.class_name)
+    };
+    let qualified = target.package_name.as_ref().map(|package| {
+        if package.is_empty() {
+            suffix.clone()
+        } else {
+            format!("{package}.{suffix}")
+        }
+    });
+    let mut unique = std::collections::HashSet::new();
+    let mut matches = suites.iter().filter_map(Value::as_str).filter(|suite| {
+        let normalized = suite.replace('$', ".");
+        unique.insert(*suite)
+            && match &qualified {
+                Some(expected) => normalized == *expected,
+                None => normalized == suffix || normalized.ends_with(&format!(".{suffix}")),
+            }
+    });
+    let suite = matches.next().map(str::to_owned);
+    if matches.next().is_some() {
+        return Err(format!(
+            "Metals discovered multiple test classes matching {suffix}"
+        ));
+    }
+    let suite = match suite {
+        Some(suite) => suite,
+        None if !target.outer_class.is_empty() => {
+            let mut outer_suites: Vec<_> = suites
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|suite| {
+                    if let Some(package) = &target.package_name {
+                        let expected = if package.is_empty() {
+                            target.outer_class.clone()
+                        } else {
+                            format!("{package}.{}", target.outer_class)
+                        };
+                        *suite == expected
+                    } else {
+                        *suite == target.outer_class
+                            || suite.ends_with(&format!(".{}", target.outer_class))
+                    }
+                })
+                .collect();
+            outer_suites.sort_unstable();
+            outer_suites.dedup();
+            if outer_suites.len() != 1 {
+                return Err(format!(
+                    "Metals did not resolve a unique outer test class for {suffix}"
+                ));
+            }
+            format!("{}${}", outer_suites[0], target.class_name)
+        }
+        None => {
+            return Err(format!(
+                "Metals did not discover test class {suffix} in {}",
+                target.file
+            ));
+        }
+    };
+    let tests: Vec<&str> = target.method.as_deref().into_iter().collect();
+    let environment = config
+        .get("env")
+        .map(|env| {
+            env.as_object()
+                .ok_or("Test environment must be an object")?
+                .iter()
+                .map(|(name, value)| {
+                    value
+                        .as_str()
+                        .map(|value| format!("{name}={value}"))
+                        .ok_or("Test environment values must be strings")
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .transpose()?
+        .unwrap_or_default();
+    if config.get("envFile").is_some() {
+        return Err("envFile is not supported for Java test targets; use env instead".into());
+    }
+    Ok(json!({
+        "request": "launch",
+        "targets": targets,
+        "dataKind": "scala-test-suites-selection",
+        "data": {
+            "suites": [{"className": suite, "tests": tests}],
+            "jvmOptions": config.get("jvmOptions").cloned().unwrap_or(json!([])),
+            "environmentVariables": environment,
+        }
+    }))
+}
+
+fn file_uri(path: &str) -> String {
+    let mut uri = String::from("file://");
+    for byte in path.bytes() {
+        if byte.is_ascii_alphanumeric() || b"/-._~:".contains(&byte) {
+            uri.push(char::from(byte));
+        } else {
+            uri.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    uri
+}
+
+fn get_port_from_uri(uri: &str) -> zed::Result<u16> {
+    uri.rsplit_once(':')
         .ok_or("Cannot find port part in the URI".to_string())
-        .and_then(|(_, port_str)| {
-            port_str // if a colon is found, take the part after it
-                .trim()
-                .parse::<u16>() // try to parse as u16
-                .map_err(|e| format!("Cannot parse port number from URI: {e}"))
+        .and_then(|(_, port)| {
+            port.trim()
+                .parse::<u16>()
+                .map_err(|error| format!("Cannot parse port number from URI: {error}"))
         })
 }
 
-// Encode string as hexadecimal to use it as file name
-fn string_to_hex(s: &str) -> String {
-    let mut hex_string = String::new();
-    for byte in s.as_bytes() {
-        hex_string.push_str(&format!("{:02x}", byte));
+fn string_to_hex(value: &str) -> String {
+    let mut encoded = String::new();
+    for byte in value.as_bytes() {
+        encoded.push_str(&format!("{byte:02x}"));
     }
-    hex_string
+    encoded
 }
 
-// Check if path is full (absolute) and if not prefix it with base
 fn full_path(path: &str, base: &str) -> String {
-    let p_path = Path::new(path);
-    if p_path.is_absolute() {
-        path.to_string()
+    if Path::new(path).is_absolute() {
+        path.to_owned()
     } else {
-        let p_base = Path::new(base);
-        p_base.join(p_path).to_string_lossy().to_string()
+        Path::new(base).join(path).to_string_lossy().into_owned()
+    }
+}
+
+#[cfg(test)]
+mod java_test_tests {
+    use super::*;
+
+    fn target() -> JavaTestTarget {
+        JavaTestTarget {
+            file: "/project/module-a/ExampleTest.java".into(),
+            class_name: "ExampleTest".into(),
+            outer_class: String::new(),
+            package_name: None,
+            method: Some("selected".into()),
+        }
+    }
+
+    fn discovery(suites: Value) -> Value {
+        json!({
+            "targets": [{"uri": "file:///project/module-a?id=test"}],
+            "dataKind": "scala-test-suites",
+            "data": suites
+        })
+    }
+
+    #[test]
+    fn method_selection_keeps_the_file_build_target_and_environment() {
+        let config = select_java_test(
+            &target(),
+            discovery(json!(["example.ExampleTest", "example.OtherTest"])),
+            &json!({"env": {"MODE": "test"}, "jvmOptions": ["-ea"]}),
+        )
+        .unwrap();
+
+        assert_eq!(
+            config["targets"],
+            json!([{"uri": "file:///project/module-a?id=test"}])
+        );
+        assert_eq!(config["dataKind"], "scala-test-suites-selection");
+        assert_eq!(
+            config["data"]["suites"],
+            json!([{"className": "example.ExampleTest", "tests": ["selected"]}])
+        );
+        assert_eq!(config["data"]["environmentVariables"], json!(["MODE=test"]));
+        assert_eq!(config["data"]["jvmOptions"], json!(["-ea"]));
+    }
+
+    #[test]
+    fn class_selection_runs_all_methods_in_only_that_class() {
+        let mut target = target();
+        target.method = None;
+        let config = select_java_test(
+            &target,
+            discovery(json!(["ExampleTest", "OtherTest"])),
+            &json!({}),
+        )
+        .unwrap();
+
+        assert_eq!(
+            config["data"]["suites"],
+            json!([{"className": "ExampleTest", "tests": []}])
+        );
+    }
+
+    #[test]
+    fn nested_class_matches_binary_names() {
+        let mut target = target();
+        target.outer_class = "Outer".into();
+        let config = select_java_test(
+            &target,
+            discovery(json!(["example.Outer$ExampleTest"])),
+            &json!({}),
+        )
+        .unwrap();
+
+        assert_eq!(
+            config["data"]["suites"][0]["className"],
+            "example.Outer$ExampleTest"
+        );
+    }
+
+    #[test]
+    fn package_disambiguates_top_level_and_nested_classes() {
+        let mut target = target();
+        target.package_name = Some("example".into());
+        let config = select_java_test(
+            &target,
+            discovery(json!(["example.Outer$ExampleTest", "example.ExampleTest"])),
+            &json!({}),
+        )
+        .unwrap();
+        assert_eq!(
+            config["data"]["suites"][0]["className"],
+            "example.ExampleTest"
+        );
+    }
+
+    #[test]
+    fn nested_class_uses_binary_name_when_metals_only_discovers_the_outer_suite() {
+        let mut target = target();
+        target.outer_class = "Outer".into();
+        let config = select_java_test(
+            &target,
+            discovery(json!(["example.Outer", "example.Outer"])),
+            &json!({}),
+        )
+        .unwrap();
+
+        assert_eq!(
+            config["data"]["suites"][0]["className"],
+            "example.Outer$ExampleTest"
+        );
+        assert!(
+            select_java_test(
+                &target,
+                discovery(json!(["a.Outer", "b.Outer"])),
+                &json!({})
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn missing_or_ambiguous_classes_never_fall_back_to_running_the_file() {
+        for suites in [
+            json!([]),
+            json!(["example.OtherTest"]),
+            json!(["a.ExampleTest", "b.ExampleTest"]),
+        ] {
+            assert!(select_java_test(&target(), discovery(suites), &json!({})).is_err());
+        }
+    }
+
+    #[test]
+    fn duplicate_suite_entries_from_metals_are_deduplicated() {
+        let config = select_java_test(
+            &target(),
+            discovery(json!(["example.ExampleTest", "example.ExampleTest"])),
+            &json!({}),
+        )
+        .unwrap();
+
+        assert_eq!(config["data"]["suites"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn file_uri_encodes_spaces_unicode_and_reserved_characters() {
+        assert_eq!(
+            file_uri("/tmp/a b/测#%.java"),
+            "file:///tmp/a%20b/%E6%B5%8B%23%25.java"
+        );
     }
 }
